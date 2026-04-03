@@ -1,3 +1,9 @@
+// *************************************
+// P1X ZIG ENGINE
+// by Krzysztof Krystian Jankowski
+// github.com/w84death/p1x-zig-engine
+// *************************************
+
 const std = @import("std");
 const c = @cImport({
     @cInclude("fenster.h");

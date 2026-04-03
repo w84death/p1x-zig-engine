@@ -1,3 +1,9 @@
+// *************************************
+// P1X ZIG ENGINE
+// by Krzysztof Krystian Jankowski
+// github.com/w84death/p1x-zig-engine
+// *************************************
+
 pub const CONF = struct {
     pub const VERSION = "1.0-beta";
     pub const THE_NAME = "P1X ZE";

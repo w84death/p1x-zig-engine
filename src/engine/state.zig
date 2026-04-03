@@ -1,3 +1,9 @@
+// *************************************
+// P1X ZIG ENGINE
+// by Krzysztof Krystian Jankowski
+// github.com/w84death/p1x-zig-engine
+// *************************************
+
 pub const State = enum {
     main_menu,
     about,

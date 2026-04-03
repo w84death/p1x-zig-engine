@@ -9,12 +9,12 @@ const c = @cImport({
     @cInclude("fenster.h");
     @cInclude("fenster_audio.h");
 });
-const CONF = @import("config.zig").CONF;
-const PIVOTS = @import("fui.zig").PIVOTS;
-const StateMachine = @import("state.zig").StateMachine;
-const State = @import("state.zig").State;
-const Fui = @import("fui.zig").Fui;
-const MouseButtons = @import("mouse.zig").MouseButtons;
+const CONF = @import("engine/config.zig").CONF;
+const PIVOTS = @import("engine/fui.zig").PIVOTS;
+const StateMachine = @import("engine/state.zig").StateMachine;
+const State = @import("engine/state.zig").State;
+const Fui = @import("engine/fui.zig").Fui;
+const MouseButtons = @import("engine/mouse.zig").MouseButtons;
 const MenuScene = @import("scenes/menu.zig").MenuScene;
 const AboutScene = @import("scenes/about.zig").AboutScene;
 

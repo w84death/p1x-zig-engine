@@ -1,10 +1,10 @@
 const std = @import("std");
-const CONF = @import("../config.zig").CONF;
-const Fui = @import("../fui.zig").Fui;
-const PIVOTS = @import("../fui.zig").PIVOTS;
-const State = @import("../state.zig").State;
-const StateMachine = @import("../state.zig").StateMachine;
-const Mouse = @import("../mouse.zig").Mouse;
+const CONF = @import("../engine/config.zig").CONF;
+const Fui = @import("../engine/fui.zig").Fui;
+const PIVOTS = @import("../engine/fui.zig").PIVOTS;
+const State = @import("../engine/state.zig").State;
+const StateMachine = @import("../engine/state.zig").StateMachine;
+const Mouse = @import("../engine/mouse.zig").Mouse;
 
 pub const AboutScene = struct {
     fui: Fui,
@@ -27,8 +27,7 @@ pub const AboutScene = struct {
             "",
             "",
             "Source code available at:",
-            "* https://github.com/w84death/p1x-zig-engine",
-            "* https://github.com/zserge/fenster",
+            "https://github.com/w84death/p1x-zig-engine",
             "",
             "MIT Licence.",
         };

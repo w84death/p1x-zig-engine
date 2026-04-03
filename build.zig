@@ -14,10 +14,10 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
-    exe.addIncludePath(b.path("src"));
+    exe.addIncludePath(b.path("src/libs"));
 
-    exe.addCSourceFile(.{ .file = b.path("src/fenster.c"), .flags = &[_][]const u8{} });
-    exe.addCSourceFile(.{ .file = b.path("src/fenster_audio.c"), .flags = &[_][]const u8{} });
+    exe.addCSourceFile(.{ .file = b.path("src/libs/fenster.c"), .flags = &[_][]const u8{} });
+    exe.addCSourceFile(.{ .file = b.path("src/libs/fenster_audio.c"), .flags = &[_][]const u8{} });
     switch (target.result.os.tag) {
         .windows => {
             exe.linkSystemLibrary("gdi32");

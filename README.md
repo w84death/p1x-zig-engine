@@ -1,6 +1,6 @@
 # P1X Zig Engine
 
-![Main window](main.png)
+![Main window](screenshot.png)
 
 Simple Zig engine project using the [fenster](https://github.com/zserge/fenster) software renderer.
 
@@ -25,3 +25,10 @@ zig build \
   -Doptimize=ReleaseSmall \
   upx
 ```
+
+## Credits
+
+Thanks to those projects:
+
+* https://github.com/zserge/fenster
+* https://jared.geek.nz/2014/01/custom-fonts-for-microcontrollers/
