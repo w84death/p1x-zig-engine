@@ -1,5 +1,7 @@
 # P1X Zig Engine
 
+![Main window](main.png)
+
 Simple Zig engine project using the `fenster` software renderer.
 
 ## Run

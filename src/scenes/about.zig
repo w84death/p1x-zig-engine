@@ -24,7 +24,7 @@ pub const AboutScene = struct {
         const lines = [_][:0]const u8{
             "P1X ZE is an Zig Engine for creating small",
             "applications for Linux and Windows.",
-            "Uses customized fenster CPU renderer.",
+            "Uses customized fenster software renderer.",
             "",
             "",
             "Source code available at:",
