@@ -14,7 +14,6 @@ const PIVOTS = @import("fui.zig").PIVOTS;
 const StateMachine = @import("state.zig").StateMachine;
 const State = @import("state.zig").State;
 const Fui = @import("fui.zig").Fui;
-const Vec2 = @import("math.zig").Vec2;
 const MouseButtons = @import("mouse.zig").MouseButtons;
 const MenuScene = @import("scenes/menu.zig").MenuScene;
 const AboutScene = @import("scenes/about.zig").AboutScene;
@@ -66,13 +65,13 @@ pub fn main() void {
         }
 
         // Quit
-        if (!sm.is(State.main_menu) and fui.button(fui.pivots[PIVOTS.TOP_RIGHT].x - 80, fui.pivots[PIVOTS.TOP_RIGHT].y, 80, 32, "Quit", CONF.COLOR_MENU_NORMAL, mouse)) {
+        if (!sm.is(State.main_menu) and fui.button(fui.pivots[PIVOTS.TOP_RIGHT][0] - 80, fui.pivots[PIVOTS.TOP_RIGHT][1], 80, 32, "Quit", CONF.COLOR_MENU_NORMAL, mouse)) {
             sm.goTo(State.quit);
         }
         // Version
         fui.draw_version();
 
-        fui.draw_cursor_lines(Vec2.init(f.x, f.y));
+        fui.draw_cursor_lines(.{ f.x, f.y });
 
         const frame_time_target: f64 = 1000.0 / 30.0;
         const processing_time: f64 = @floatFromInt(c.fenster_time() - now);

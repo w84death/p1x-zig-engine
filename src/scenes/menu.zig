@@ -4,7 +4,6 @@ const Fui = @import("../fui.zig").Fui;
 const PIVOTS = @import("../fui.zig").PIVOTS;
 const State = @import("../state.zig").State;
 const StateMachine = @import("../state.zig").StateMachine;
-const Vec2 = @import("../math.zig").Vec2;
 const Mouse = @import("../mouse.zig").Mouse;
 const MenuItem = struct {
     text: [:0]const u8,
@@ -43,18 +42,18 @@ pub const MenuScene = struct {
         };
     }
     pub fn draw(self: *MenuScene, mouse: Mouse) void {
-        const cx: i32 = self.fui.pivots[PIVOTS.CENTER].x;
-        const cy: i32 = self.fui.pivots[PIVOTS.CENTER].y - 192;
+        const cx: i32 = self.fui.pivots[PIVOTS.CENTER][0];
+        const cy: i32 = self.fui.pivots[PIVOTS.CENTER][1] - 192;
 
-        const tx: i32 = cx - self.fui.text_center(CONF.THE_NAME, CONF.FONT_BIG).x;
+        const tx: i32 = cx - self.fui.text_center(CONF.THE_NAME, CONF.FONT_BIG)[0];
         self.fui.draw_text(CONF.THE_NAME, tx + 4, cy + 4, CONF.FONT_BIG, CONF.COLOR_SECONDARY);
         self.fui.draw_text(CONF.THE_NAME, tx, cy, CONF.FONT_BIG, CONF.COLOR_PRIMARY);
 
-        self.fui.draw_text(CONF.TAG_LINE, cx - self.fui.text_center(CONF.TAG_LINE, CONF.FONT_DEFAULT_SIZE).x, cy + 64, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
+        self.fui.draw_text(CONF.TAG_LINE, cx - self.fui.text_center(CONF.TAG_LINE, CONF.FONT_DEFAULT_SIZE)[0], cy + 64, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
 
         var y: i32 = cy + 128;
         for (self.groups) |group| {
-            const title_x = cx - self.fui.text_center(group.title, CONF.FONT_DEFAULT_SIZE).x;
+            const title_x = cx - self.fui.text_center(group.title, CONF.FONT_DEFAULT_SIZE)[0];
             self.fui.draw_text(group.title, title_x, y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
             y += 24;
 

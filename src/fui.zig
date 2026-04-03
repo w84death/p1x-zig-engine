@@ -2,11 +2,15 @@ const std = @import("std");
 const c = @cImport({
     @cInclude("fenster.h");
 });
-const Vec2 = @import("math.zig").Vec2;
 const Mouse = @import("mouse.zig").Mouse;
 const Rect = @import("math.zig").Rect;
 const CONF = @import("config.zig").CONF;
 const Font = @import("font.zig").Font8x16;
+const Vec2 = @Vector(2, i32);
+
+inline fn vec2(x: i32, y: i32) Vec2 {
+    return .{ x, y };
+}
 pub const PIVOTS = struct {
     pub const PADDING = 24;
     pub const CENTER = 0;
@@ -23,11 +27,11 @@ pub const Fui = struct {
         return Fui{
             .buf = buf,
             .pivots = .{
-                Vec2.init(CONF.SCREEN_W / 2, CONF.SCREEN_H / 2),
-                Vec2.init(PIVOTS.PADDING, PIVOTS.PADDING),
-                Vec2.init(CONF.SCREEN_W - PIVOTS.PADDING, PIVOTS.PADDING),
-                Vec2.init(PIVOTS.PADDING, CONF.SCREEN_H - PIVOTS.PADDING),
-                Vec2.init(CONF.SCREEN_W - PIVOTS.PADDING, CONF.SCREEN_H - PIVOTS.PADDING),
+                vec2(CONF.SCREEN_W / 2, CONF.SCREEN_H / 2),
+                vec2(PIVOTS.PADDING, PIVOTS.PADDING),
+                vec2(CONF.SCREEN_W - PIVOTS.PADDING, PIVOTS.PADDING),
+                vec2(PIVOTS.PADDING, CONF.SCREEN_H - PIVOTS.PADDING),
+                vec2(CONF.SCREEN_W - PIVOTS.PADDING, CONF.SCREEN_H - PIVOTS.PADDING),
             },
         };
     }
@@ -225,17 +229,17 @@ pub const Fui = struct {
     pub fn text_center(self: *Fui, s: []const u8, scale: i32) Vec2 {
         _ = self;
         const len: i32 = @intCast(s.len);
-        return Vec2.init(@divFloor(len * scale * CONF.FONT_WIDTH + (len - 2) * scale, 2), @divFloor(scale * CONF.FONT_HEIGHT, 2));
+        return vec2(@divFloor(len * scale * CONF.FONT_WIDTH + (len - 2) * scale, 2), @divFloor(scale * CONF.FONT_HEIGHT, 2));
     }
     pub fn draw_cursor_lines(self: *Fui, mouse: Vec2) void {
-        self.draw_line(mouse.x, 0, mouse.x, CONF.SCREEN_H, CONF.COLOR_CROSSHAIR);
-        self.draw_line(0, mouse.y, CONF.SCREEN_W, mouse.y, CONF.COLOR_CROSSHAIR);
+        self.draw_line(mouse[0], 0, mouse[0], CONF.SCREEN_H, CONF.COLOR_CROSSHAIR);
+        self.draw_line(0, mouse[1], CONF.SCREEN_W, mouse[1], CONF.COLOR_CROSSHAIR);
     }
     pub fn button(self: *Fui, x: i32, y: i32, w: i32, h: i32, label: [:0]const u8, color: u32, mouse: Mouse) bool {
         const hover: bool = self.check_hover(mouse, Rect.init(w, h, x, y));
         const text_cener = self.text_center(label, CONF.FONT_DEFAULT_SIZE);
-        const text_x: i32 = x + @divFloor(w, 2) - text_cener.x;
-        const text_y: i32 = y + @divFloor(h, 2) - text_cener.y;
+        const text_x: i32 = x + @divFloor(w, 2) - text_cener[0];
+        const text_y: i32 = y + @divFloor(h, 2) - text_cener[1];
 
         // self.draw_rect(x + CONF.SHADOW, y + CONF.SHADOW, w, h, CONF.COLOR_SHADOW);
         self.draw_rect(x, y, w, h, color);
@@ -251,41 +255,41 @@ pub const Fui = struct {
     }
     pub fn draw_version(self: *Fui) void {
         const len = self.text_length(CONF.VERSION, CONF.FONT_DEFAULT_SIZE);
-        const ver_x: i32 = self.pivots[PIVOTS.BOTTOM_RIGHT].x - len;
-        const ver_y: i32 = self.pivots[PIVOTS.BOTTOM_RIGHT].y;
+        const ver_x: i32 = self.pivots[PIVOTS.BOTTOM_RIGHT][0] - len;
+        const ver_y: i32 = self.pivots[PIVOTS.BOTTOM_RIGHT][1];
         self.draw_text(CONF.VERSION, ver_x, ver_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_SECONDARY);
     }
     fn draw_base_popup(self: *Fui, message: [:0]const u8, bg_color: u32) Rect {
         const text_width: i32 = self.text_length(message, CONF.FONT_DEFAULT_SIZE);
-        const popup_size = Vec2.init(if (text_width < 256) 256 else text_width + 128, 128);
-        const center = Vec2.init(self.pivots[PIVOTS.CENTER].x, self.pivots[PIVOTS.CENTER].y);
-        const popup_corner = Vec2.init(center.x - @divFloor(popup_size.x, 2), center.y - @divFloor(popup_size.y, 2));
+        const popup_size = vec2(if (text_width < 256) 256 else text_width + 128, 128);
+        const center = vec2(self.pivots[PIVOTS.CENTER][0], self.pivots[PIVOTS.CENTER][1]);
+        const popup_corner = vec2(center[0] - @divFloor(popup_size[0], 2), center[1] - @divFloor(popup_size[1], 2));
 
-        const text_x: i32 = popup_corner.x + @divFloor(popup_size.x - text_width, 2);
-        const text_y: i32 = popup_corner.y + 24;
+        const text_x: i32 = popup_corner[0] + @divFloor(popup_size[0] - text_width, 2);
+        const text_y: i32 = popup_corner[1] + 24;
 
-        const x: i32 = popup_corner.x;
-        const y: i32 = popup_corner.y;
-        const w: i32 = popup_size.x;
-        const h: i32 = popup_size.y;
+        const x: i32 = popup_corner[0];
+        const y: i32 = popup_corner[1];
+        const w: i32 = popup_size[0];
+        const h: i32 = popup_size[1];
 
         self.draw_rect(x + 8, y + 8, w, h, CONF.COLOR_SHADOW);
         self.draw_rect(x, y, w, h, bg_color);
         self.draw_rect_lines(x, y, w, h, CONF.COLOR_LIGHT);
         self.draw_text(message, text_x, text_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_POPUP_MSG);
-        return Rect.init(popup_size.x, popup_size.y, popup_corner.x, popup_corner.y);
+        return Rect.init(popup_size[0], popup_size[1], popup_corner[0], popup_corner[1]);
     }
     pub fn info_popup(self: *Fui, message: [:0]const u8, mouse: Mouse, bg_color: u32) ?bool {
         // Popup
         const popupv4: Rect = self.draw_base_popup(message, bg_color);
-        const popup_corner = Vec2.init(popupv4.x, popupv4.y);
+        const popup_corner = vec2(popupv4.x, popupv4.y);
         const popup_height = popupv4.h;
 
         // Button
         const button_height = 32;
         const button_width = 80;
-        const button_x = self.pivots[PIVOTS.CENTER].x - @divFloor(button_width, 2);
-        const button_y = popup_corner.y + popup_height - 50;
+        const button_x = self.pivots[PIVOTS.CENTER][0] - @divFloor(button_width, 2);
+        const button_y = popup_corner[1] + popup_height - 50;
         const ok_clicked = self.button(button_x, button_y, button_width, button_height, "OK", CONF.COLOR_OK, mouse);
         if (ok_clicked) return true;
         return null;
@@ -293,15 +297,15 @@ pub const Fui = struct {
     pub fn yes_no_popup(self: *Fui, message: [:0]const u8, mouse: Mouse) ?bool {
         // Popup
         const popupv4: Rect = self.draw_base_popup(message, CONF.COLOR_POPUP);
-        const popup_corner = Vec2.init(popupv4.x, popupv4.y);
-        const popup_size = Vec2.init(popupv4.w, popupv4.h);
+        const popup_corner = vec2(popupv4.x, popupv4.y);
+        const popup_size = vec2(popupv4.w, popupv4.h);
 
         // buttons
-        const button_y = popup_corner.y + popup_size.y - 50;
+        const button_y = popup_corner[1] + popup_size[1] - 50;
         const button_height = 32;
         const button_width = 80;
-        const no_x = popup_corner.x + 24;
-        const yes_x = popup_corner.x + popup_size.x - 80 - 24;
+        const no_x = popup_corner[0] + 24;
+        const yes_x = popup_corner[0] + popup_size[0] - 80 - 24;
 
         const yes_clicked = self.button(yes_x, button_y, button_width, button_height, "Yes", CONF.COLOR_YES, mouse);
         if (yes_clicked) return true;
