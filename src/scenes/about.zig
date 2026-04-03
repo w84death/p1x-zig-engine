@@ -28,7 +28,8 @@ pub const AboutScene = struct {
             "",
             "",
             "Source code available at:",
-            "https://github.com/w84death/p1x-zig-engine",
+            "* https://github.com/w84death/p1x-zig-engine",
+            "* https://github.com/zserge/fenster"
             "",
             "MIT Licence.",
         };

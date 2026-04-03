@@ -2,7 +2,7 @@
 
 ![Main window](main.png)
 
-Simple Zig engine project using the `fenster` software renderer.
+Simple Zig engine project using the [fenster](https://github.com/zserge/fenster) software renderer.
 
 ## Run
 ```
