@@ -4,15 +4,20 @@
 // github.com/w84death/p1x-zig-engine
 // *************************************
 
-const std = @import("std");
-const c = @cImport({
-    @cInclude("fenster.h");
-});
 const Mouse = @import("mouse.zig").Mouse;
-const Rect = @import("math.zig").Rect;
+const Render = @import("render.zig").Render;
 const CONF = @import("config.zig").CONF;
 const Font = @import("font.zig").Font8x16;
 const Vec2 = @Vector(2, i32);
+const Rect = struct {
+    w: i32,
+    h: i32,
+    x: i32,
+    y: i32,
+    pub fn init(w: i32, h: i32, x: i32, y: i32) Rect {
+        return .{ .w = w, .h = h, .x = x, .y = y };
+    }
+};
 
 inline fn vec2(x: i32, y: i32) Vec2 {
     return .{ x, y };
@@ -29,10 +34,10 @@ pub const Pivot = enum {
 };
 pub const Fui = struct {
     app_name: [:0]const u8 = CONF.THE_NAME,
-    buf: *[CONF.SCREEN_W * CONF.SCREEN_H]u32 = undefined,
+    renderer: Render,
     pub fn init(buf: *[CONF.SCREEN_W * CONF.SCREEN_H]u32) Fui {
         return Fui{
-            .buf = buf,
+            .renderer = Render.init(buf),
         };
     }
     pub inline fn pivot(self: *const Fui, p: Pivot) Vec2 {
@@ -51,170 +56,7 @@ pub const Fui = struct {
     pub inline fn pivotY(self: *const Fui, p: Pivot) i32 {
         return self.pivot(p)[1];
     }
-    pub fn put_pixel(self: *Fui, x: i32, y: i32, color: u32) void {
-        const index: usize = @intCast(y * CONF.SCREEN_W + x);
-        self.buf[index] = color;
-    }
 
-    pub fn get_pixel(self: *Fui, x: i32, y: i32) u32 {
-        const index: u32 = @intCast(y * CONF.SCREEN_W + x);
-        return self.buf[index];
-    }
-    pub fn clear_background(self: *Fui, color: u32) void {
-        for (self.buf, 0..) |_, i| {
-            self.buf[i] = color;
-        }
-    }
-    pub fn draw_line(self: *Fui, x0: i32, y0: i32, x1: i32, y1: i32, color: u32) void {
-        var x = x0;
-        var y = y0;
-        const dx: i32 = @intCast(@abs(x1 - x0));
-        const dy: i32 = @intCast(@abs(y1 - y0));
-        const sx: i32 = if (x0 < x1) 1 else -1;
-        const sy: i32 = if (y0 < y1) 1 else -1;
-        var err: i32 = if (dx > dy) dx else -dy;
-        err = @divFloor(err, 2);
-        while (true) {
-            if (x >= 0 and x < CONF.SCREEN_W and y >= 0 and y < CONF.SCREEN_H) {
-                self.put_pixel(x, y, color);
-            }
-            if (x == x1 and y == y1) break;
-            const e2 = err;
-            if (e2 > -dx) {
-                err -= dy;
-                x += sx;
-            }
-            if (e2 < dy) {
-                err += dx;
-                y += sy;
-            }
-        }
-    }
-    pub fn draw_rect(self: *Fui, x: i32, y: i32, w: i32, h: i32, color: u32) void {
-        if (w <= 0 or h <= 0) return;
-
-        var rx = x;
-        var ry = y;
-        var rw = w;
-        var rh = h;
-
-        // Crop left
-        if (rx < 0) {
-            rw += rx;
-            rx = 0;
-        }
-        // Crop top
-        if (ry < 0) {
-            rh += ry;
-            ry = 0;
-        }
-        // Crop right
-        if (rx + rw > CONF.SCREEN_W) {
-            rw = CONF.SCREEN_W - rx;
-        }
-        // Crop bottom
-        if (ry + rh > CONF.SCREEN_H) {
-            rh = CONF.SCREEN_H - ry;
-        }
-
-        if (rw <= 0 or rh <= 0) return;
-
-        const ix: u32 = @intCast(rx);
-        const iy: u32 = @intCast(ry);
-        const iw: u32 = @intCast(rw);
-        const ih: u32 = @intCast(rh);
-
-        for (iy..(iy + ih)) |row| {
-            for (ix..(ix + iw)) |col| {
-                self.put_pixel(@intCast(col), @intCast(row), color);
-            }
-        }
-    }
-    pub fn draw_rect_trans(self: *Fui, x: i32, y: i32, w: i32, h: i32, color: u32) void {
-        if (w <= 0 or h <= 0) return;
-
-        var rx = x;
-        var ry = y;
-        var rw = w;
-        var rh = h;
-
-        // Crop left
-        if (rx < 0) {
-            rw += rx;
-            rx = 0;
-        }
-        // Crop top
-        if (ry < 0) {
-            rh += ry;
-            ry = 0;
-        }
-        // Crop right
-        if (rx + rw > CONF.SCREEN_W) {
-            rw = CONF.SCREEN_W - rx;
-        }
-        // Crop bottom
-        if (ry + rh > CONF.SCREEN_H) {
-            rh = CONF.SCREEN_H - ry;
-        }
-
-        if (rw <= 0 or rh <= 0) return;
-
-        const ix: u32 = @intCast(rx);
-        const iy: u32 = @intCast(ry);
-        const iw: u32 = @intCast(rw);
-        const ih: u32 = @intCast(rh);
-
-        for (iy..(iy + ih)) |row| {
-            for (ix..(ix + iw)) |col| {
-                const local_row = row - iy;
-                if (local_row % 4 != 1) {
-                    self.put_pixel(@intCast(col), @intCast(row), color);
-                }
-            }
-        }
-    }
-    pub fn draw_rect_lines(self: *Fui, x: i32, y: i32, w: i32, h: i32, color: u32) void {
-        if (w <= 0 or h <= 0) return;
-        self.draw_line(x, y, x + w - 1, y, color);
-        self.draw_line(x, y + h - 1, x + w - 1, y + h - 1, color);
-        self.draw_line(x, y, x, y + h - 1, color);
-        self.draw_line(x + w - 1, y, x + w - 1, y + h - 1, color);
-    }
-    pub fn draw_hline(self: *Fui, x: i32, y: i32, w: i32, color: u32) void {
-        if (w <= 0) return;
-        self.draw_line(x, y, x + w - 1, y, color);
-    }
-    pub fn draw_circle(self: *Fui, x: i32, y: i32, r: u32, color: u32) void {
-        const rr = @as(i64, r) * r;
-        const ir: i32 = @intCast(r);
-        var dy: i32 = -ir;
-        while (dy <= ir) : (dy += 1) {
-            var dx: i32 = -ir;
-            while (dx <= ir) : (dx += 1) {
-                const px = x + dx;
-                const py = y + dy;
-                if (px >= 0 and px < CONF.SCREEN_W and py >= 0 and py < CONF.SCREEN_H) {
-                    const dist = @as(i64, dx) * dx + @as(i64, dy) * dy;
-                    if (dist <= rr) {
-                        const index = (@as(usize, @intCast(py)) * CONF.SCREEN_W) + @as(usize, @intCast(px));
-                        self.buf[index] = color;
-                    }
-                }
-            }
-        }
-    }
-    pub fn fill(self: *Fui, x: i32, y: i32, old_color: u32, new_color: u32) void {
-        if (x < 0 or y < 0 or x >= CONF.SCREEN_W or y >= CONF.SCREEN_H) {
-            return;
-        }
-        if (self.get_pixel(x, y) == old_color) {
-            self.put_pixel(x, y, new_color);
-            self.fill(x - 1, y, old_color, new_color);
-            self.fill(x + 1, y, old_color, new_color);
-            self.fill(x, y - 1, old_color, new_color);
-            self.fill(x, y + 1, old_color, new_color);
-        }
-    }
     pub fn draw_text(self: *Fui, s: []const u8, x: i32, y: i32, scale: i32, color: u32) void {
         var px = x;
         for (s) |chr| {
@@ -228,8 +70,8 @@ pub const Fui = struct {
                         if ((bmh >> bit) & 1 != 0) {
                             const rx: i32 = @intCast(dx * scale);
                             const ry: i32 = @intCast(dy * scale);
-                            self.draw_rect(px + rx + 2, y + ry + 2, scale, scale, CONF.COLOR_SHADOW);
-                            self.draw_rect(px + rx, y + ry, scale, scale, color);
+                            self.renderer.draw_rect(px + rx + 2, y + ry + 2, scale, scale, CONF.COLOR_SHADOW);
+                            self.renderer.draw_rect(px + rx, y + ry, scale, scale, color);
                         }
                     }
                 }
@@ -248,8 +90,8 @@ pub const Fui = struct {
         return vec2(@divFloor(len * scale * CONF.FONT_WIDTH + (len - 2) * scale, 2), @divFloor(scale * CONF.FONT_HEIGHT, 2));
     }
     pub fn draw_cursor_lines(self: *Fui, mouse: Vec2) void {
-        self.draw_line(mouse[0], 0, mouse[0], CONF.SCREEN_H, CONF.COLOR_CROSSHAIR);
-        self.draw_line(0, mouse[1], CONF.SCREEN_W, mouse[1], CONF.COLOR_CROSSHAIR);
+        self.renderer.draw_line(mouse[0], 0, mouse[0], CONF.SCREEN_H, CONF.COLOR_CROSSHAIR);
+        self.renderer.draw_line(0, mouse[1], CONF.SCREEN_W, mouse[1], CONF.COLOR_CROSSHAIR);
     }
     pub fn button(self: *Fui, x: i32, y: i32, w: i32, h: i32, label: [:0]const u8, color: u32, mouse: Mouse) bool {
         const hover: bool = self.check_hover(mouse, Rect.init(w, h, x, y));
@@ -257,9 +99,9 @@ pub const Fui = struct {
         const text_x: i32 = x + @divFloor(w, 2) - text_cener[0];
         const text_y: i32 = y + @divFloor(h, 2) - text_cener[1];
 
-        // self.draw_rect(x + CONF.SHADOW, y + CONF.SHADOW, w, h, CONF.COLOR_SHADOW);
-        self.draw_rect(x, y, w, h, color);
-        self.draw_rect_lines(x, y, w, h, if (hover) CONF.COLOR_MENU_FRAME_HOVER else CONF.COLOR_MENU_FRAME);
+        // self.renderer.draw_rect(x + CONF.SHADOW, y + CONF.SHADOW, w, h, CONF.COLOR_SHADOW);
+        self.renderer.draw_rect(x, y, w, h, color);
+        self.renderer.draw_rect_lines(x, y, w, h, if (hover) CONF.COLOR_MENU_FRAME_HOVER else CONF.COLOR_MENU_FRAME);
         self.draw_text(label, text_x, text_y, CONF.FONT_DEFAULT_SIZE, if (hover) CONF.COLOR_MENU_FRAME_HOVER else CONF.COLOR_MENU_TEXT);
 
         return mouse.pressed and hover;
@@ -289,9 +131,9 @@ pub const Fui = struct {
         const w: i32 = popup_size[0];
         const h: i32 = popup_size[1];
 
-        self.draw_rect(x + 8, y + 8, w, h, CONF.COLOR_SHADOW);
-        self.draw_rect(x, y, w, h, bg_color);
-        self.draw_rect_lines(x, y, w, h, CONF.COLOR_LIGHT);
+        self.renderer.draw_rect(x + 8, y + 8, w, h, CONF.COLOR_SHADOW);
+        self.renderer.draw_rect(x, y, w, h, bg_color);
+        self.renderer.draw_rect_lines(x, y, w, h, CONF.COLOR_LIGHT);
         self.draw_text(message, text_x, text_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_POPUP_MSG);
         return Rect.init(popup_size[0], popup_size[1], popup_corner[0], popup_corner[1]);
     }

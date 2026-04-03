@@ -65,7 +65,7 @@ pub const MenuScene = struct {
                 y += 38;
                 rect_height += 38;
             }
-            self.fui.draw_rect_lines(cx - 110, rect_y_start, 220, rect_height, CONF.COLOR_SECONDARY);
+            self.fui.renderer.draw_rect_lines(cx - 110, rect_y_start, 220, rect_height, CONF.COLOR_SECONDARY);
             y += 16;
         }
     }

@@ -29,22 +29,17 @@ pub fn main() void {
     defer c.fenster_close(&f);
     var mouse_buttons = MouseButtons.init();
     var fui = Fui.init(&buf);
+    var renderer = &fui.renderer;
     var sm = StateMachine.init(State.main_menu);
 
     var menu = MenuScene.init(fui, &sm);
     var about = AboutScene.init(fui, &sm);
 
     var close_application = false;
-    var dt: f32 = 0.0;
-    var now: i64 = c.fenster_time();
-    var fps_text_buf: [32]u8 = undefined;
 
     while (!close_application and c.fenster_loop(&f) == 0) {
-        const d: f32 = @floatFromInt(c.fenster_time() - now);
-        dt = @as(f32, d / 1000.0);
-        now = c.fenster_time();
         sm.update();
-        fui.clear_background(CONF.COLOR_BG);
+        renderer.begin_frame();
 
         const mouse = mouse_buttons.update(f.x, f.y, @intCast(f.mouse));
 
@@ -69,18 +64,6 @@ pub fn main() void {
             sm.goTo(State.quit);
         }
 
-        fui.draw_version();
-        const fps: i32 = if (dt > 0.0) @intFromFloat(@round(1.0 / dt)) else 0;
-        const fps_text = std.fmt.bufPrint(&fps_text_buf, "FPS: {d}", .{fps}) catch "FPS: ?";
-        fui.draw_text(fps_text, fui.pivotX(.bottom_left), fui.pivotY(.bottom_left), CONF.FONT_DEFAULT_SIZE, CONF.COLOR_SECONDARY);
-
-        fui.draw_cursor_lines(.{ f.x, f.y });
-
-        const frame_time_target: f64 = 1000.0 / 60.0;
-        const processing_time: f64 = @floatFromInt(c.fenster_time() - now);
-        const sleep_ms: i64 = @intFromFloat(@max(0.0, frame_time_target - processing_time));
-        if (sleep_ms > 0) {
-            c.fenster_sleep(sleep_ms);
-        }
+        renderer.end_frame(&fui, f.x, f.y);
     }
 }
