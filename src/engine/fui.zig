@@ -32,7 +32,6 @@ pub const Pivot = enum {
     bottom_right,
 };
 pub const Fui = struct {
-    app_name: [:0]const u8 = CONF.THE_NAME,
     renderer: Render,
     pub fn init(buf: *[CONF.SCREEN_W * CONF.SCREEN_H]u32) Fui {
         return Fui{
