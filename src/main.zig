@@ -10,12 +10,17 @@ const c = @cImport({
     @cInclude("fenster_audio.h");
 });
 const CONF = @import("engine/config.zig").CONF;
-const StateMachine = @import("engine/state.zig").StateMachine;
-const State = @import("engine/state.zig").State;
+const THEME = @import("themes/mil.zig").Theme;
 const Fui = @import("engine/fui.zig").Fui;
 const MouseButtons = @import("engine/mouse.zig").MouseButtons;
-const MenuScene = @import("scenes/menu.zig").MenuScene;
-const AboutScene = @import("scenes/about.zig").AboutScene;
+const State = enum {
+    main_menu,
+    about,
+    quit,
+};
+const StateMachine = @import("engine/state.zig").StateMachine(State);
+const MenuScene = @import("scenes/menu.zig").MenuScene(State, StateMachine);
+const AboutScene = @import("scenes/about.zig").AboutScene(State, StateMachine);
 
 pub fn main() void {
     var buf: [CONF.SCREEN_W * CONF.SCREEN_H]u32 = undefined;
@@ -31,15 +36,33 @@ pub fn main() void {
     var fui = Fui.init(&buf);
     var renderer = &fui.renderer;
     var sm = StateMachine.init(State.main_menu);
+    var fps_text_buf: [32]u8 = undefined;
 
-    var menu = MenuScene.init(fui, &sm);
-    var about = AboutScene.init(fui, &sm);
+    const menu_groups = [_]MenuScene.MenuGroup{
+        .{
+            .title = "Main Menu",
+            .items = &[_]MenuScene.MenuItem{
+                .{ .text = "Start", .color = THEME.MENU_NORMAL, .target_state = State.main_menu },
+            },
+        },
+        .{
+            .title = "System",
+            .items = &[_]MenuScene.MenuItem{
+                .{ .text = "About", .color = THEME.MENU_SECONDARY, .target_state = State.about },
+                .{ .text = "Quit", .color = THEME.MENU_SECONDARY, .target_state = State.quit },
+            },
+        },
+    };
+
+    var menu = MenuScene.init(&fui, &sm, &menu_groups);
+    var about = AboutScene.init(&fui, &sm, State.main_menu);
 
     var close_application = false;
 
     while (!close_application and c.fenster_loop(&f) == 0) {
         sm.update();
         renderer.begin_frame();
+        renderer.clear_background(THEME.BG);
 
         const mouse = mouse_buttons.update(f.x, f.y, @intCast(f.mouse));
 
@@ -60,10 +83,15 @@ pub fn main() void {
         }
 
         // Quit
-        if (!sm.is(State.main_menu) and fui.button(fui.pivotX(.top_right) - 80, fui.pivotY(.top_right), 80, 32, "Quit", CONF.COLOR_MENU_NORMAL, mouse)) {
-            sm.goTo(State.quit);
+        if (!sm.is(State.main_menu) and fui.button(fui.pivotX(.top_right) - 80, fui.pivotY(.top_right), 80, 32, "Quit", THEME.MENU_NORMAL, mouse)) {
+            sm.go_to(State.quit);
         }
 
-        renderer.end_frame(&fui, f.x, f.y);
+        fui.draw_version();
+        const fps: i32 = if (renderer.dt > 0.0) @intFromFloat(@round(1.0 / renderer.dt)) else 0;
+        const fps_text = std.fmt.bufPrint(&fps_text_buf, "FPS: {d}", .{fps}) catch "FPS: ?";
+        fui.draw_text(fps_text, fui.pivotX(.bottom_left), fui.pivotY(.bottom_left), CONF.FONT_DEFAULT_SIZE, THEME.SECONDARY);
+        fui.draw_cursor_lines(.{ f.x, f.y });
+        renderer.cap_frame(CONF.TARGET_FPS);
     }
 }

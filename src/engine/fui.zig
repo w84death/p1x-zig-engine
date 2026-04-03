@@ -7,6 +7,7 @@
 const Mouse = @import("mouse.zig").Mouse;
 const Render = @import("render.zig").Render;
 const CONF = @import("config.zig").CONF;
+const THEME = @import("../themes/mil.zig").Theme;
 const Font = @import("font.zig").Font8x16;
 const Vec2 = @Vector(2, i32);
 const Rect = struct {
@@ -22,9 +23,7 @@ const Rect = struct {
 inline fn vec2(x: i32, y: i32) Vec2 {
     return .{ x, y };
 }
-pub const PIVOTS = struct {
-    pub const PADDING = 24;
-};
+const PIVOT_PADDING = 24;
 pub const Pivot = enum {
     center,
     top_left,
@@ -44,10 +43,10 @@ pub const Fui = struct {
         _ = self;
         return switch (p) {
             .center => vec2(CONF.SCREEN_W / 2, CONF.SCREEN_H / 2),
-            .top_left => vec2(PIVOTS.PADDING, PIVOTS.PADDING),
-            .top_right => vec2(CONF.SCREEN_W - PIVOTS.PADDING, PIVOTS.PADDING),
-            .bottom_left => vec2(PIVOTS.PADDING, CONF.SCREEN_H - PIVOTS.PADDING),
-            .bottom_right => vec2(CONF.SCREEN_W - PIVOTS.PADDING, CONF.SCREEN_H - PIVOTS.PADDING),
+            .top_left => vec2(PIVOT_PADDING, PIVOT_PADDING),
+            .top_right => vec2(CONF.SCREEN_W - PIVOT_PADDING, PIVOT_PADDING),
+            .bottom_left => vec2(PIVOT_PADDING, CONF.SCREEN_H - PIVOT_PADDING),
+            .bottom_right => vec2(CONF.SCREEN_W - PIVOT_PADDING, CONF.SCREEN_H - PIVOT_PADDING),
         };
     }
     pub inline fn pivotX(self: *const Fui, p: Pivot) i32 {
@@ -70,7 +69,7 @@ pub const Fui = struct {
                         if ((bmh >> bit) & 1 != 0) {
                             const rx: i32 = @intCast(dx * scale);
                             const ry: i32 = @intCast(dy * scale);
-                            self.renderer.draw_rect(px + rx + 2, y + ry + 2, scale, scale, CONF.COLOR_SHADOW);
+                            self.renderer.draw_rect(px + rx + 2, y + ry + 2, scale, scale, THEME.SHADOW);
                             self.renderer.draw_rect(px + rx, y + ry, scale, scale, color);
                         }
                     }
@@ -90,8 +89,8 @@ pub const Fui = struct {
         return vec2(@divFloor(len * scale * CONF.FONT_WIDTH + (len - 2) * scale, 2), @divFloor(scale * CONF.FONT_HEIGHT, 2));
     }
     pub fn draw_cursor_lines(self: *Fui, mouse: Vec2) void {
-        self.renderer.draw_line(mouse[0], 0, mouse[0], CONF.SCREEN_H, CONF.COLOR_CROSSHAIR);
-        self.renderer.draw_line(0, mouse[1], CONF.SCREEN_W, mouse[1], CONF.COLOR_CROSSHAIR);
+        self.renderer.draw_line(mouse[0], 0, mouse[0], CONF.SCREEN_H, THEME.CROSSHAIR);
+        self.renderer.draw_line(0, mouse[1], CONF.SCREEN_W, mouse[1], THEME.CROSSHAIR);
     }
     pub fn button(self: *Fui, x: i32, y: i32, w: i32, h: i32, label: [:0]const u8, color: u32, mouse: Mouse) bool {
         const hover: bool = self.check_hover(mouse, Rect.init(w, h, x, y));
@@ -99,10 +98,10 @@ pub const Fui = struct {
         const text_x: i32 = x + @divFloor(w, 2) - text_cener[0];
         const text_y: i32 = y + @divFloor(h, 2) - text_cener[1];
 
-        // self.renderer.draw_rect(x + CONF.SHADOW, y + CONF.SHADOW, w, h, CONF.COLOR_SHADOW);
+        // self.renderer.draw_rect(x + CONF.SHADOW, y + CONF.SHADOW, w, h, THEME.SHADOW);
         self.renderer.draw_rect(x, y, w, h, color);
-        self.renderer.draw_rect_lines(x, y, w, h, if (hover) CONF.COLOR_MENU_FRAME_HOVER else CONF.COLOR_MENU_FRAME);
-        self.draw_text(label, text_x, text_y, CONF.FONT_DEFAULT_SIZE, if (hover) CONF.COLOR_MENU_FRAME_HOVER else CONF.COLOR_MENU_TEXT);
+        self.renderer.draw_rect_lines(x, y, w, h, if (hover) THEME.MENU_FRAME_HOVER else THEME.MENU_FRAME);
+        self.draw_text(label, text_x, text_y, CONF.FONT_DEFAULT_SIZE, if (hover) THEME.MENU_FRAME_HOVER else THEME.MENU_TEXT);
 
         return mouse.pressed and hover;
     }
@@ -115,7 +114,7 @@ pub const Fui = struct {
         const len = self.text_length(CONF.VERSION, CONF.FONT_DEFAULT_SIZE);
         const ver_x: i32 = self.pivotX(.bottom_right) - len;
         const ver_y: i32 = self.pivotY(.bottom_right);
-        self.draw_text(CONF.VERSION, ver_x, ver_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_SECONDARY);
+        self.draw_text(CONF.VERSION, ver_x, ver_y, CONF.FONT_DEFAULT_SIZE, THEME.SECONDARY);
     }
     fn draw_base_popup(self: *Fui, message: [:0]const u8, bg_color: u32) Rect {
         const text_width: i32 = self.text_length(message, CONF.FONT_DEFAULT_SIZE);
@@ -131,10 +130,10 @@ pub const Fui = struct {
         const w: i32 = popup_size[0];
         const h: i32 = popup_size[1];
 
-        self.renderer.draw_rect(x + 8, y + 8, w, h, CONF.COLOR_SHADOW);
+        self.renderer.draw_rect(x + 8, y + 8, w, h, THEME.SHADOW);
         self.renderer.draw_rect(x, y, w, h, bg_color);
-        self.renderer.draw_rect_lines(x, y, w, h, CONF.COLOR_LIGHT);
-        self.draw_text(message, text_x, text_y, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_POPUP_MSG);
+        self.renderer.draw_rect_lines(x, y, w, h, THEME.LIGHT);
+        self.draw_text(message, text_x, text_y, CONF.FONT_DEFAULT_SIZE, THEME.POPUP_MSG);
         return Rect.init(popup_size[0], popup_size[1], popup_corner[0], popup_corner[1]);
     }
     pub fn info_popup(self: *Fui, message: [:0]const u8, mouse: Mouse, bg_color: u32) ?bool {
@@ -148,13 +147,13 @@ pub const Fui = struct {
         const button_width = 80;
         const button_x = self.pivotX(.center) - @divFloor(button_width, 2);
         const button_y = popup_corner[1] + popup_height - 50;
-        const ok_clicked = self.button(button_x, button_y, button_width, button_height, "OK", CONF.COLOR_OK, mouse);
+        const ok_clicked = self.button(button_x, button_y, button_width, button_height, "OK", THEME.OK, mouse);
         if (ok_clicked) return true;
         return null;
     }
     pub fn yes_no_popup(self: *Fui, message: [:0]const u8, mouse: Mouse) ?bool {
         // Popup
-        const popupv4: Rect = self.draw_base_popup(message, CONF.COLOR_POPUP);
+        const popupv4: Rect = self.draw_base_popup(message, THEME.POPUP);
         const popup_corner = vec2(popupv4.x, popupv4.y);
         const popup_size = vec2(popupv4.w, popupv4.h);
 
@@ -165,10 +164,10 @@ pub const Fui = struct {
         const no_x = popup_corner[0] + 24;
         const yes_x = popup_corner[0] + popup_size[0] - 80 - 24;
 
-        const yes_clicked = self.button(yes_x, button_y, button_width, button_height, "Yes", CONF.COLOR_YES, mouse);
+        const yes_clicked = self.button(yes_x, button_y, button_width, button_height, "Yes", THEME.YES, mouse);
         if (yes_clicked) return true;
 
-        const no_clicked = self.button(no_x, button_y, button_width, button_height, "No", CONF.COLOR_NO, mouse);
+        const no_clicked = self.button(no_x, button_y, button_width, button_height, "No", THEME.NO, mouse);
         if (no_clicked) return false;
 
         return null;

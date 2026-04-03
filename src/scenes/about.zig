@@ -1,40 +1,45 @@
-const std = @import("std");
 const CONF = @import("../engine/config.zig").CONF;
+const THEME = @import("../themes/mil.zig").Theme;
 const Fui = @import("../engine/fui.zig").Fui;
-const State = @import("../engine/state.zig").State;
-const StateMachine = @import("../engine/state.zig").StateMachine;
 const Mouse = @import("../engine/mouse.zig").Mouse;
 
-pub const AboutScene = struct {
-    fui: Fui,
-    sm: *StateMachine,
-    pub fn init(fui: Fui, sm: *StateMachine) AboutScene {
-        return AboutScene{ .fui = fui, .sm = sm };
-    }
-    pub fn draw(self: *AboutScene, mouse: Mouse) void {
-        const px = self.fui.pivotX(.top_left);
-        const py = self.fui.pivotY(.top_left);
-        if (self.fui.button(px, py, 120, 32, "< Menu", CONF.COLOR_MENU_SECONDARY, mouse)) {
-            self.sm.goTo(State.main_menu);
+pub fn AboutScene(comptime State: type, comptime StateMachine: type) type {
+    return struct {
+        const Self = @This();
+
+        fui: *Fui,
+        sm: *StateMachine,
+        back_target_state: State,
+
+        pub fn init(fui: *Fui, sm: *StateMachine, back_target_state: State) Self {
+            return Self{ .fui = fui, .sm = sm, .back_target_state = back_target_state };
         }
 
-        var ay: i32 = py + 64;
-        const lines = [_][:0]const u8{
-            "P1X ZE is an Zig Engine for creating small",
-            "applications for Linux and Windows.",
-            "Uses customized fenster software renderer.",
-            "",
-            "",
-            "Source code available at:",
-            "https://github.com/w84death/p1x-zig-engine",
-            "",
-            "MIT Licence.",
-        };
+        pub fn draw(self: *Self, mouse: Mouse) void {
+            const px = self.fui.pivotX(.top_left);
+            const py = self.fui.pivotY(.top_left);
+            if (self.fui.button(px, py, 120, 32, "< Menu", THEME.MENU_SECONDARY, mouse)) {
+                self.sm.go_to(self.back_target_state);
+            }
 
-        const line_height = 24;
-        for (lines) |line| {
-            self.fui.draw_text(line, px, ay, CONF.FONT_DEFAULT_SIZE, CONF.COLOR_PRIMARY);
-            ay += line_height;
+            var ay: i32 = py + 64;
+            const lines = [_][:0]const u8{
+                "P1X ZE is an Zig Engine for creating small",
+                "applications for Linux and Windows.",
+                "",
+                "",
+                "Uses customized fenster software renderer.",
+                "Source code available at:",
+                "https://github.com/w84death/p1x-zig-engine",
+                "",
+                "MIT Licence.",
+            };
+
+            const line_height = 24;
+            for (lines) |line| {
+                self.fui.draw_text(line, px, ay, CONF.FONT_DEFAULT_SIZE, THEME.PRIMARY);
+                ay += line_height;
+            }
         }
-    }
-};
+    };
+}

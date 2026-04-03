@@ -4,7 +4,6 @@
 // github.com/w84death/p1x-zig-engine
 // *************************************
 
-const std = @import("std");
 const c = @cImport({
     @cInclude("fenster.h");
 });
@@ -14,44 +13,24 @@ pub const Render = struct {
     buf: *[CONF.SCREEN_W * CONF.SCREEN_H]u32,
     dt: f32 = 0.0,
     now: i64,
-    fps_text_buf: [32]u8 = undefined,
 
     pub fn init(buf: *[CONF.SCREEN_W * CONF.SCREEN_H]u32) Render {
         return .{ .buf = buf, .now = c.fenster_time() };
     }
 
-    pub fn beginFrame(self: *Render) f32 {
+    pub fn begin_frame(self: *Render) void {
         const d: f32 = @floatFromInt(c.fenster_time() - self.now);
         self.dt = @as(f32, d / 1000.0);
         self.now = c.fenster_time();
-        return self.dt;
     }
 
-    pub fn begin_frame(self: *Render) void {
-        _ = self.beginFrame();
-        self.clear_background(CONF.COLOR_BG);
-    }
-
-    pub fn drawFps(self: *Render, fui: anytype) void {
-        const fps: i32 = if (self.dt > 0.0) @intFromFloat(@round(1.0 / self.dt)) else 0;
-        const fps_text = std.fmt.bufPrint(&self.fps_text_buf, "FPS: {d}", .{fps}) catch "FPS: ?";
-        fui.draw_text(fps_text, fui.pivotX(.bottom_left), fui.pivotY(.bottom_left), CONF.FONT_DEFAULT_SIZE, CONF.COLOR_SECONDARY);
-    }
-
-    pub fn capFrame(self: *Render, target_fps: f64) void {
+    pub fn cap_frame(self: *Render, target_fps: f64) void {
         const frame_time_target: f64 = 1000.0 / target_fps;
         const processing_time: f64 = @floatFromInt(c.fenster_time() - self.now);
         const sleep_ms: i64 = @intFromFloat(@max(0.0, frame_time_target - processing_time));
         if (sleep_ms > 0) {
             c.fenster_sleep(sleep_ms);
         }
-    }
-
-    pub fn end_frame(self: *Render, fui: anytype, mouse_x: i32, mouse_y: i32) void {
-        fui.draw_version();
-        self.drawFps(fui);
-        fui.draw_cursor_lines(.{ mouse_x, mouse_y });
-        self.capFrame(60.0);
     }
 
     pub fn put_pixel(self: *Render, x: i32, y: i32, color: u32) void {
