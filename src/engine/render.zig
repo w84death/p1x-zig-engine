@@ -10,6 +10,13 @@ const c = @cImport({
 const CONF = @import("config.zig").CONF;
 
 pub const Render = struct {
+    const ClippedRect = struct {
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+    };
+
     buf: *[CONF.SCREEN_W * CONF.SCREEN_H]u32,
     dt: f32 = 0.0,
     now: i64,
@@ -76,34 +83,12 @@ pub const Render = struct {
     }
 
     pub fn draw_rect(self: *Render, x: i32, y: i32, w: i32, h: i32, color: u32) void {
-        if (w <= 0 or h <= 0) return;
+        const clipped = clip_rect(x, y, w, h) orelse return;
 
-        var rx = x;
-        var ry = y;
-        var rw = w;
-        var rh = h;
-
-        if (rx < 0) {
-            rw += rx;
-            rx = 0;
-        }
-        if (ry < 0) {
-            rh += ry;
-            ry = 0;
-        }
-        if (rx + rw > CONF.SCREEN_W) {
-            rw = CONF.SCREEN_W - rx;
-        }
-        if (ry + rh > CONF.SCREEN_H) {
-            rh = CONF.SCREEN_H - ry;
-        }
-
-        if (rw <= 0 or rh <= 0) return;
-
-        const ix: u32 = @intCast(rx);
-        const iy: u32 = @intCast(ry);
-        const iw: u32 = @intCast(rw);
-        const ih: u32 = @intCast(rh);
+        const ix: u32 = @intCast(clipped.x);
+        const iy: u32 = @intCast(clipped.y);
+        const iw: u32 = @intCast(clipped.w);
+        const ih: u32 = @intCast(clipped.h);
 
         for (iy..(iy + ih)) |row| {
             for (ix..(ix + iw)) |col| {
@@ -113,34 +98,12 @@ pub const Render = struct {
     }
 
     pub fn draw_rect_trans(self: *Render, x: i32, y: i32, w: i32, h: i32, color: u32) void {
-        if (w <= 0 or h <= 0) return;
+        const clipped = clip_rect(x, y, w, h) orelse return;
 
-        var rx = x;
-        var ry = y;
-        var rw = w;
-        var rh = h;
-
-        if (rx < 0) {
-            rw += rx;
-            rx = 0;
-        }
-        if (ry < 0) {
-            rh += ry;
-            ry = 0;
-        }
-        if (rx + rw > CONF.SCREEN_W) {
-            rw = CONF.SCREEN_W - rx;
-        }
-        if (ry + rh > CONF.SCREEN_H) {
-            rh = CONF.SCREEN_H - ry;
-        }
-
-        if (rw <= 0 or rh <= 0) return;
-
-        const ix: u32 = @intCast(rx);
-        const iy: u32 = @intCast(ry);
-        const iw: u32 = @intCast(rw);
-        const ih: u32 = @intCast(rh);
+        const ix: u32 = @intCast(clipped.x);
+        const iy: u32 = @intCast(clipped.y);
+        const iw: u32 = @intCast(clipped.w);
+        const ih: u32 = @intCast(clipped.h);
 
         for (iy..(iy + ih)) |row| {
             for (ix..(ix + iw)) |col| {
@@ -186,6 +149,9 @@ pub const Render = struct {
     }
 
     pub fn fill(self: *Render, x: i32, y: i32, old_color: u32, new_color: u32) void {
+        if (old_color == new_color) {
+            return;
+        }
         if (x < 0 or y < 0 or x >= CONF.SCREEN_W or y >= CONF.SCREEN_H) {
             return;
         }
@@ -196,5 +162,33 @@ pub const Render = struct {
             self.fill(x, y - 1, old_color, new_color);
             self.fill(x, y + 1, old_color, new_color);
         }
+    }
+
+    fn clip_rect(x: i32, y: i32, w: i32, h: i32) ?ClippedRect {
+        if (w <= 0 or h <= 0) return null;
+
+        var rx = x;
+        var ry = y;
+        var rw = w;
+        var rh = h;
+
+        if (rx < 0) {
+            rw += rx;
+            rx = 0;
+        }
+        if (ry < 0) {
+            rh += ry;
+            ry = 0;
+        }
+        if (rx + rw > CONF.SCREEN_W) {
+            rw = CONF.SCREEN_W - rx;
+        }
+        if (ry + rh > CONF.SCREEN_H) {
+            rh = CONF.SCREEN_H - ry;
+        }
+
+        if (rw <= 0 or rh <= 0) return null;
+
+        return ClippedRect{ .x = rx, .y = ry, .w = rw, .h = rh };
     }
 };

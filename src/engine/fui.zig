@@ -109,7 +109,7 @@ pub fn Fui(comptime Theme: type) type {
             self.renderer.draw_rect_lines(x, y, w, h, if (hover) Theme.MENU_FRAME_HOVER_COLOR else Theme.MENU_FRAME_COLOR);
             self.draw_text(label, text_x, text_y, Theme.FONT_DEFAULT, if (hover) Theme.BUTTON_TEXT_HOVER_COLOR else Theme.BUTTON_TEXT_COLOR);
 
-            return mouse.pressed and hover;
+            return mouse.just_pressed and hover;
         }
         pub fn check_hover(self: *Self, mouse: Mouse, target: Rect) bool {
             _ = self;
