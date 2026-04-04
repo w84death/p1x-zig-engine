@@ -67,7 +67,7 @@ pub fn main() void {
     const core_menu = Menu.init(&fui, &menu_groups);
     var menu = MenuScene.init(&fui, &sm, core_menu);
     var about = AboutScene.init(&fui);
-    var example = ExampleScene.init(&fui);
+    var example = ExampleScene.init(std.heap.c_allocator, &fui);
     defer example.deinit();
 
     while (c.fenster_loop(&f) == 0) {

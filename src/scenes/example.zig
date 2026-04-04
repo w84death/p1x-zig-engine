@@ -1,4 +1,5 @@
 const std = @import("std");
+const CONF = @import("../engine/config.zig").CONF;
 const Mouse = @import("../engine/mouse.zig").Mouse;
 const Menu = @import("../engine/menu.zig").Menu;
 const Render = @import("../engine/render.zig").Render;
@@ -9,6 +10,8 @@ const StateMachine = @import("../engine/state.zig").StateMachine;
 const SPRITE_PATH = "sprites/borowik.bmp";
 const SPRITE_SIZE = 32;
 const SPRITE_FRAME_DURATION = 0.12;
+const SPRITE_START_FRAME = 0;
+const SPRITE_ANIM_LEN = 3;
 
 pub fn ExampleScene(comptime Theme: type) type {
     const Fui = @import("../engine/fui.zig").Fui(Theme);
@@ -17,13 +20,20 @@ pub fn ExampleScene(comptime Theme: type) type {
         none,
         info_popup,
         yes_no_popup,
-        reset_effect,
+        toggle_vfx,
+        spawn_sprite,
+        spawn_50_sprites,
     };
     const ActionState = StateMachine(Action);
     const ActionMenu = Menu(Action, ActionState, Theme);
 
     return struct {
         const Self = @This();
+        const SpriteInstance = struct {
+            sprite: Sprite,
+            x: i32,
+            y: i32,
+        };
 
         const action_groups = [_]ActionMenu.MenuGroup{
             .{
@@ -31,31 +41,44 @@ pub fn ExampleScene(comptime Theme: type) type {
                 .items = &[_]ActionMenu.MenuItem{
                     .{ .text = "Info Popup", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.info_popup },
                     .{ .text = "Ask Yes/No", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.yes_no_popup },
-                    .{ .text = "Reset Effect", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.reset_effect },
+                    .{ .text = "Toggle VFX", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.toggle_vfx },
+                    .{ .text = "Spawn Sprite", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.spawn_sprite },
+                    .{ .text = "Spawn 50", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.spawn_50_sprites },
                 },
             },
         };
 
+        allocator: std.mem.Allocator,
         fui: *Fui,
         vfx: Vfx,
         action_state: ActionState,
         action_menu: ActionMenu,
         sprite_sheet: ?SpriteSheet,
-        sprite_anim: ?Sprite,
+        sprites: std.ArrayListUnmanaged(SpriteInstance),
+        prng: std.Random.DefaultPrng,
+        vfx_enabled: bool,
         last_yes_no: ?bool = null,
 
-        pub fn init(fui: *Fui) Self {
+        pub fn init(allocator: std.mem.Allocator, fui: *Fui) Self {
             var self: Self = undefined;
+            var seed: u64 = 0;
+            std.posix.getrandom(std.mem.asBytes(&seed)) catch {};
+
+            self.allocator = allocator;
             self.fui = fui;
             self.vfx = Vfx.init();
             self.action_state = ActionState.init(Action.none);
             self.action_menu = ActionMenu.init(fui, &action_groups);
             self.sprite_sheet = null;
-            self.sprite_anim = null;
-            if (SpriteSheet.load_bmp(std.heap.c_allocator, SPRITE_PATH)) |sheet| {
+            self.sprites = .{};
+            self.prng = std.Random.DefaultPrng.init(seed);
+            self.vfx_enabled = false;
+
+            if (SpriteSheet.load_bmp(self.allocator, SPRITE_PATH)) |sheet| {
                 self.sprite_sheet = sheet;
-                self.sprite_anim = Sprite.init(&self.sprite_sheet.?, SPRITE_FRAME_DURATION);
-                self.sprite_anim.?.set_animation(0, 3, SPRITE_FRAME_DURATION, true) catch {};
+                self.spawn_random_sprite() catch |err| {
+                    std.log.err("failed to spawn initial sprite: {s}", .{@errorName(err)});
+                };
             } else |err| {
                 std.log.err("failed to load sprite sheet {s}: {s}", .{ SPRITE_PATH, @errorName(err) });
             }
@@ -64,27 +87,27 @@ pub fn ExampleScene(comptime Theme: type) type {
         }
 
         pub fn deinit(self: *Self) void {
+            self.sprites.deinit(self.allocator);
             if (self.sprite_sheet) |*sheet| {
                 sheet.deinit();
                 self.sprite_sheet = null;
             }
-            self.sprite_anim = null;
         }
 
         pub fn draw(self: *Self, mouse: Mouse, dt: f32, renderer: *Render) void {
             self.action_state.update();
-            self.vfx.draw(renderer, Theme.SECONDARY_COLOR, dt);
+            if (self.vfx_enabled) {
+                self.vfx.draw(renderer, Theme.SECONDARY_COLOR, dt);
+            }
 
             const title = "Example Scene";
             const tx = self.fui.pivotX(.center) - self.fui.text_center(title, Theme.FONT_MEDIUM)[0];
-            const ty = self.fui.pivotY(.center) - 128;
+            const ty = self.fui.pivotY(.center) - 160;
             self.fui.draw_text(renderer, title, tx, ty, Theme.FONT_MEDIUM, Theme.PRIMARY_COLOR);
 
-            if (self.sprite_anim) |*sprite| {
-                sprite.update(dt);
-                const sx = self.fui.pivotX(.top_right) - SPRITE_SIZE;
-                const sy = self.fui.pivotY(.top_right);
-                sprite.draw(renderer, sx, sy);
+            for (self.sprites.items) |*instance| {
+                instance.sprite.update(dt);
+                instance.sprite.draw(renderer, instance.x, instance.y);
             }
 
             switch (self.action_state.current) {
@@ -99,8 +122,24 @@ pub fn ExampleScene(comptime Theme: type) type {
                         self.action_state.go_to(Action.none);
                     }
                 },
-                .reset_effect => {
-                    self.vfx = Vfx.init();
+                .toggle_vfx => {
+                    self.vfx_enabled = !self.vfx_enabled;
+                    self.action_state.go_to(Action.none);
+                },
+                .spawn_sprite => {
+                    self.spawn_random_sprite() catch |err| {
+                        std.log.err("failed to spawn sprite: {s}", .{@errorName(err)});
+                    };
+                    self.action_state.go_to(Action.none);
+                },
+                .spawn_50_sprites => {
+                    var i: usize = 0;
+                    while (i < 50) : (i += 1) {
+                        self.spawn_random_sprite() catch |err| {
+                            std.log.err("failed to spawn sprite: {s}", .{@errorName(err)});
+                            break;
+                        };
+                    }
                     self.action_state.go_to(Action.none);
                 },
                 .none => {
@@ -116,6 +155,29 @@ pub fn ExampleScene(comptime Theme: type) type {
             else
                 "Last choice: No";
             self.fui.draw_text(renderer, status, mx, ty + 290, Theme.FONT_DEFAULT, Theme.SECONDARY_COLOR);
+
+            var count_buf: [32]u8 = undefined;
+            const count_text = std.fmt.bufPrint(&count_buf, "Sprites: {d}", .{self.sprites.items.len}) catch "Sprites: ?";
+            self.fui.draw_text(renderer, count_text, self.fui.pivotX(.top_right) - 200, self.fui.pivotY(.top_right), Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
+
+            const vfx_text: [:0]const u8 = if (self.vfx_enabled) "VFX: ON" else "VFX: OFF";
+            self.fui.draw_text(renderer, vfx_text, self.fui.pivotX(.top_right) - 224, self.fui.pivotY(.top_right) + 24, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
+        }
+
+        fn spawn_random_sprite(self: *Self) !void {
+            const sheet = if (self.sprite_sheet) |*s| s else return;
+
+            var sprite = Sprite.init(sheet, SPRITE_FRAME_DURATION);
+            try sprite.set_animation(SPRITE_START_FRAME, SPRITE_ANIM_LEN, SPRITE_FRAME_DURATION, true);
+
+            const max_x = @max(0, CONF.SCREEN_W - SPRITE_SIZE);
+            const max_y = @max(0, CONF.SCREEN_H - SPRITE_SIZE);
+            const rand = self.prng.random();
+
+            const x = rand.intRangeAtMost(i32, 0, max_x);
+            const y = rand.intRangeAtMost(i32, 0, max_y);
+
+            try self.sprites.append(self.allocator, .{ .sprite = sprite, .x = x, .y = y });
         }
     };
 }
