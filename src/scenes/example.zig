@@ -12,6 +12,10 @@ const SPRITE_SIZE = 32;
 const SPRITE_FRAME_DURATION = 0.12;
 const SPRITE_ANIM_LEN = 3;
 const SPRITE_FOLLOW_CURSOR_CHANCE = 3;
+const TERRAIN_PATH = "sprites/terrain.bmp";
+const TERRAIN_TILE_SIZE = 32;
+const TERRAIN_ANIM_LEN = 4;
+const TERRAIN_SPLAT_COUNT = 1000;
 const EXAMPLE_BG_COLOR = 0x4B692f;
 const TERRAIN_WEAR_DARKEN = 8;
 
@@ -58,6 +62,7 @@ pub fn ExampleScene(comptime Theme: type) type {
         action_state: ActionState,
         action_menu: ActionMenu,
         sprite_sheet: ?*SpriteSheet,
+        terrain_sheet: ?*SpriteSheet,
         sprites: std.ArrayListUnmanaged(SpriteInstance),
         prng: std.Random.DefaultPrng,
         vfx_enabled: bool,
@@ -75,6 +80,7 @@ pub fn ExampleScene(comptime Theme: type) type {
             self.action_state = ActionState.init(Action.none);
             self.action_menu = ActionMenu.init(fui, &action_groups);
             self.sprite_sheet = null;
+            self.terrain_sheet = null;
             self.sprites = .{};
             self.prng = std.Random.DefaultPrng.init(seed);
             self.vfx_enabled = false;
@@ -91,6 +97,19 @@ pub fn ExampleScene(comptime Theme: type) type {
             } else |err| {
                 std.log.err("failed to load sprite sheet {s}: {s}", .{ SPRITE_PATH, @errorName(err) });
             }
+
+            if (SpriteSheet.load_bmp_tiled(self.allocator, TERRAIN_PATH, TERRAIN_TILE_SIZE, TERRAIN_TILE_SIZE, 0)) |sheet| {
+                const terrain_sheet_ptr = self.allocator.create(SpriteSheet) catch |err| {
+                    std.log.err("failed to allocate terrain sheet: {s}", .{@errorName(err)});
+                    self.last_yes_no = null;
+                    return self;
+                };
+                terrain_sheet_ptr.* = sheet;
+                self.terrain_sheet = terrain_sheet_ptr;
+            } else |err| {
+                std.log.err("failed to load terrain sheet {s}: {s}", .{ TERRAIN_PATH, @errorName(err) });
+            }
+
             self.last_yes_no = null;
             return self;
         }
@@ -102,13 +121,18 @@ pub fn ExampleScene(comptime Theme: type) type {
                 self.allocator.destroy(sheet);
                 self.sprite_sheet = null;
             }
+            if (self.terrain_sheet) |sheet| {
+                sheet.deinit();
+                self.allocator.destroy(sheet);
+                self.terrain_sheet = null;
+            }
         }
 
         pub fn draw(self: *Self, mouse: Mouse, dt: f32, renderer: *Render) void {
             self.action_state.update();
 
             if (!self.terrain_ready) {
-                renderer.clear_buffer(.terrain, EXAMPLE_BG_COLOR);
+                self.init_terrain(renderer);
                 self.terrain_ready = true;
             }
             renderer.copy_buffer(.terrain, .frame);
@@ -220,6 +244,29 @@ pub fn ExampleScene(comptime Theme: type) type {
             const y = rand.intRangeAtMost(i32, 0, max_y);
 
             try self.sprites.append(self.allocator, .{ .sprite = sprite, .x = x, .y = y });
+        }
+
+        fn init_terrain(self: *Self, renderer: *Render) void {
+            renderer.clear_buffer(.terrain, EXAMPLE_BG_COLOR);
+
+            const terrain_sheet = self.terrain_sheet orelse return;
+
+            renderer.set_target(.terrain);
+            defer renderer.set_target(.frame);
+            var stamp = Sprite.init(terrain_sheet, 0.0);
+            stamp.set_animation(0, TERRAIN_ANIM_LEN, 0.0, true) catch return;
+
+            const rand = self.prng.random();
+            const max_x = @max(0, CONF.SCREEN_W - TERRAIN_TILE_SIZE);
+            const max_y = @max(0, CONF.SCREEN_H - TERRAIN_TILE_SIZE);
+
+            var i: usize = 0;
+            while (i < TERRAIN_SPLAT_COUNT) : (i += 1) {
+                stamp.current_offset = rand.intRangeAtMost(usize, 0, TERRAIN_ANIM_LEN - 1);
+                const x = rand.intRangeAtMost(i32, 0, max_x);
+                const y = rand.intRangeAtMost(i32, 0, max_y);
+                stamp.draw(renderer, x, y);
+            }
         }
     };
 }
