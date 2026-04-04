@@ -1,4 +1,3 @@
-const CONF = @import("../engine/config.zig").CONF;
 const THEME = @import("../themes/mil.zig").Theme;
 const Fui = @import("../engine/fui.zig").Fui;
 
@@ -29,9 +28,10 @@ pub fn AboutScene() type {
                 "MIT Licence.",
             };
 
+            // move to draw_text_block
             const line_height = 24;
             for (lines) |line| {
-                self.fui.draw_text(line, px, ay, CONF.FONT_DEFAULT_SIZE, THEME.PRIMARY);
+                self.fui.draw_text(line, px, ay, THEME.FONT_DEFAULT_SIZE, THEME.PRIMARY);
                 ay += line_height;
             }
         }

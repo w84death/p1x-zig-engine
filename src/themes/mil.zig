@@ -27,4 +27,19 @@ pub const Theme = struct {
     pub const MENU_SECONDARY = 0x142019;
     pub const MENU_HIGHLIGHT = 0xC4FF79;
     pub const MENU_DANGER = 0xA85B52;
+
+    pub const MENU_GROUP_TITLE_HEIGHT = 24;
+    pub const MENU_FRAME_BASE_HEIGHT = 8;
+    pub const MENU_ITEM_HEIGHT = 32;
+    pub const MENU_ITEM_STEP = 38;
+    pub const MENU_GROUP_SPACING = 16;
+    pub const MENU_BUTTON_X_PADDING = 8;
+    pub const MENU_FRAME_X_PADDING = 16;
+
+    pub const PIVOT_PADDING = 24;
+
+    pub const FONT_SMOL = 1;
+    pub const FONT_DEFAULT_SIZE = 2;
+    pub const FONT_MEDIUM = 4;
+    pub const FONT_BIG = 8;
 };

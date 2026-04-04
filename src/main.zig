@@ -105,7 +105,7 @@ pub fn main() void {
         fui.draw_version();
         const fps: i32 = if (renderer.dt > 0.0) @intFromFloat(@round(1.0 / renderer.dt)) else 0;
         const fps_text = std.fmt.bufPrint(&fps_text_buf, "FPS: {d}", .{fps}) catch "FPS: ?";
-        fui.draw_text(fps_text, fui.pivotX(.bottom_left), fui.pivotY(.bottom_left), CONF.FONT_DEFAULT_SIZE, THEME.SECONDARY);
+        fui.draw_text(fps_text, fui.pivotX(.bottom_left), fui.pivotY(.bottom_left), THEME.FONT_DEFAULT_SIZE, THEME.SECONDARY);
         fui.draw_cursor_lines(.{ f.x, f.y });
         renderer.cap_frame(CONF.TARGET_FPS);
     }

@@ -23,7 +23,6 @@ const Rect = struct {
 inline fn vec2(x: i32, y: i32) Vec2 {
     return .{ x, y };
 }
-const PIVOT_PADDING = 24;
 pub const Pivot = enum {
     center,
     top_left,
@@ -42,10 +41,10 @@ pub const Fui = struct {
         _ = self;
         return switch (p) {
             .center => vec2(CONF.SCREEN_W / 2, CONF.SCREEN_H / 2),
-            .top_left => vec2(PIVOT_PADDING, PIVOT_PADDING),
-            .top_right => vec2(CONF.SCREEN_W - PIVOT_PADDING, PIVOT_PADDING),
-            .bottom_left => vec2(PIVOT_PADDING, CONF.SCREEN_H - PIVOT_PADDING),
-            .bottom_right => vec2(CONF.SCREEN_W - PIVOT_PADDING, CONF.SCREEN_H - PIVOT_PADDING),
+            .top_left => vec2(THEME.PIVOT_PADDING, THEME.PIVOT_PADDING),
+            .top_right => vec2(CONF.SCREEN_W - THEME.PIVOT_PADDING, THEME.PIVOT_PADDING),
+            .bottom_left => vec2(THEME.PIVOT_PADDING, CONF.SCREEN_H - THEME.PIVOT_PADDING),
+            .bottom_right => vec2(CONF.SCREEN_W - THEME.PIVOT_PADDING, CONF.SCREEN_H - THEME.PIVOT_PADDING),
         };
     }
     pub inline fn pivotX(self: *const Fui, p: Pivot) i32 {
@@ -91,14 +90,14 @@ pub const Fui = struct {
     }
     pub fn button(self: *Fui, x: i32, y: i32, w: i32, h: i32, label: [:0]const u8, color: u32, mouse: Mouse) bool {
         const hover: bool = self.check_hover(mouse, Rect.init(w, h, x, y));
-        const text_cener = self.text_center(label, CONF.FONT_DEFAULT_SIZE);
+        const text_cener = self.text_center(label, THEME.FONT_DEFAULT_SIZE);
         const text_x: i32 = x + @divFloor(w, 2) - text_cener[0];
         const text_y: i32 = y + @divFloor(h, 2) - text_cener[1];
 
         // self.renderer.draw_rect(x + CONF.SHADOW, y + CONF.SHADOW, w, h, THEME.SHADOW);
         self.renderer.draw_rect(x, y, w, h, color);
         self.renderer.draw_rect_lines(x, y, w, h, if (hover) THEME.MENU_FRAME_HOVER else THEME.MENU_FRAME);
-        self.draw_text(label, text_x, text_y, CONF.FONT_DEFAULT_SIZE, if (hover) THEME.MENU_FRAME_HOVER else THEME.MENU_TEXT);
+        self.draw_text(label, text_x, text_y, THEME.FONT_DEFAULT_SIZE, if (hover) THEME.MENU_FRAME_HOVER else THEME.MENU_TEXT);
 
         return mouse.pressed and hover;
     }
@@ -108,13 +107,13 @@ pub const Fui = struct {
             mouse.y >= target.y and mouse.y < target.y + target.h;
     }
     pub fn draw_version(self: *Fui) void {
-        const len = self.text_length(CONF.VERSION, CONF.FONT_DEFAULT_SIZE);
+        const len = self.text_length(CONF.VERSION, THEME.FONT_DEFAULT_SIZE);
         const ver_x: i32 = self.pivotX(.bottom_right) - len;
         const ver_y: i32 = self.pivotY(.bottom_right);
-        self.draw_text(CONF.VERSION, ver_x, ver_y, CONF.FONT_DEFAULT_SIZE, THEME.SECONDARY);
+        self.draw_text(CONF.VERSION, ver_x, ver_y, THEME.FONT_DEFAULT_SIZE, THEME.SECONDARY);
     }
     fn draw_base_popup(self: *Fui, message: [:0]const u8, bg_color: u32) Rect {
-        const text_width: i32 = self.text_length(message, CONF.FONT_DEFAULT_SIZE);
+        const text_width: i32 = self.text_length(message, THEME.FONT_DEFAULT_SIZE);
         const popup_size = vec2(if (text_width < 256) 256 else text_width + 128, 128);
         const center = vec2(self.pivotX(.center), self.pivotY(.center));
         const popup_corner = vec2(center[0] - @divFloor(popup_size[0], 2), center[1] - @divFloor(popup_size[1], 2));
@@ -130,7 +129,7 @@ pub const Fui = struct {
         self.renderer.draw_rect(x + 8, y + 8, w, h, THEME.SHADOW);
         self.renderer.draw_rect(x, y, w, h, bg_color);
         self.renderer.draw_rect_lines(x, y, w, h, THEME.LIGHT);
-        self.draw_text(message, text_x, text_y, CONF.FONT_DEFAULT_SIZE, THEME.POPUP_MSG);
+        self.draw_text(message, text_x, text_y, THEME.FONT_DEFAULT_SIZE, THEME.POPUP_MSG);
         return Rect.init(popup_size[0], popup_size[1], popup_corner[0], popup_corner[1]);
     }
     pub fn info_popup(self: *Fui, message: [:0]const u8, mouse: Mouse, bg_color: u32) ?bool {

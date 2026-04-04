@@ -1,4 +1,3 @@
-const CONF = @import("../engine/config.zig").CONF;
 const THEME = @import("../themes/mil.zig").Theme;
 const Fui = @import("../engine/fui.zig").Fui;
 const Mouse = @import("../engine/mouse.zig").Mouse;
@@ -51,9 +50,9 @@ pub fn ExampleScene() type {
             self.vfx.draw(THEME.SECONDARY, dt);
 
             const title = "Example Scene";
-            const tx = self.fui.pivotX(.center) - self.fui.text_center(title, CONF.FONT_MEDIUM)[0];
+            const tx = self.fui.pivotX(.center) - self.fui.text_center(title, THEME.FONT_MEDIUM)[0];
             const ty = self.fui.pivotY(.center) - 128;
-            self.fui.draw_text(title, tx, ty, CONF.FONT_MEDIUM, THEME.PRIMARY);
+            self.fui.draw_text(title, tx, ty, THEME.FONT_MEDIUM, THEME.PRIMARY);
 
             switch (self.action_state.current) {
                 .info_popup => {
@@ -83,7 +82,7 @@ pub fn ExampleScene() type {
                 "Last choice: Yes"
             else
                 "Last choice: No";
-            self.fui.draw_text(status, mx, ty + 290, CONF.FONT_DEFAULT_SIZE, THEME.SECONDARY);
+            self.fui.draw_text(status, mx, ty + 290, THEME.FONT_DEFAULT_SIZE, THEME.SECONDARY);
         }
     };
 }

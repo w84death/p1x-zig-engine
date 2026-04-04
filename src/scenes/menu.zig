@@ -24,13 +24,19 @@ pub fn MenuScene(comptime Menu: type) type {
 
         pub fn draw(self: *Self, mouse: Mouse) void {
             const cx: i32 = self.fui.pivotX(.center);
-            const cy: i32 = self.fui.pivotY(.center) - 192;
-            const tx: i32 = cx - self.fui.text_center(CONF.THE_NAME, CONF.FONT_BIG)[0];
-            self.fui.draw_text(CONF.THE_NAME, tx + 4, cy + 4, CONF.FONT_BIG, THEME.SECONDARY);
-            self.fui.draw_text(CONF.THE_NAME, tx, cy, CONF.FONT_BIG, THEME.PRIMARY);
-            self.fui.draw_text(CONF.TAG_LINE, cx - self.fui.text_center(CONF.TAG_LINE, CONF.FONT_DEFAULT_SIZE)[0], cy + 64, CONF.FONT_DEFAULT_SIZE, THEME.PRIMARY);
+            const menu_h = self.calc_menu_height();
+            const menu_y = self.fui.pivotY(.center) - @divFloor(menu_h, 2);
+            const cy: i32 = menu_y - 128;
+            const tx: i32 = cx - self.fui.text_center(CONF.THE_NAME, THEME.FONT_BIG)[0];
+            self.fui.draw_text(CONF.THE_NAME, tx + 4, cy + 4, THEME.FONT_BIG, THEME.SECONDARY);
+            self.fui.draw_text(CONF.THE_NAME, tx, cy, THEME.FONT_BIG, THEME.PRIMARY);
+            self.fui.draw_text(CONF.TAG_LINE, cx - self.fui.text_center(CONF.TAG_LINE, THEME.FONT_DEFAULT_SIZE)[0], cy + 64, THEME.FONT_DEFAULT_SIZE, THEME.PRIMARY);
 
-            self.menu.draw(self.sm, mouse);
+            self.menu.draw_at(self.sm, mouse, cx, menu_y);
+        }
+
+        fn calc_menu_height(self: *Self) i32 {
+            return self.menu.height();
         }
     };
 }

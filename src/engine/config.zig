@@ -13,8 +13,4 @@ pub const CONF = struct {
     pub const TARGET_FPS = 60.0;
     pub const FONT_WIDTH = 8;
     pub const FONT_HEIGHT = 8;
-    pub const FONT_SMOL = 1;
-    pub const FONT_DEFAULT_SIZE = 2;
-    pub const FONT_MEDIUM = 4;
-    pub const FONT_BIG = 8;
 };
