@@ -4,27 +4,56 @@
 
 Simple Zig engine project using the [fenster](https://github.com/zserge/fenster) software renderer.
 
+See full usage and architecture docs in [MANUAL.md](MANUAL.md).
+
 ## Run
+
 ```
 zig build run
 ```
 
-## Build Small Binary
+## Build
 
-Host Linux -> **Linux 64**
+Default build:
+
 ```
-zig build \
-  -Doptimize=ReleaseSmall \
-  upx
+zig build
 ```
 
-Host Linux -> **Windows 32**
-``` 
-zig build \
-  -Dtarget=x86-windows \
-  -Doptimize=ReleaseSmall \
-  upx
+Release builds are `ReleaseSmall` and UPX-compressed.
+
+### Linux (host target)
+
 ```
+zig build release-linux
+```
+
+### Windows (32 + 64)
+
+```
+zig build release-windows
+```
+
+## Engine Features
+
+- software rendering with `fenster` backend
+- generic state machine (`go_to`, `update`, `is`)
+- reusable menu system (`src/engine/menu.zig`)
+- immediate-mode UI helpers (`Fui`):
+  - text rendering and text block drawing
+  - buttons with hover and click-edge behavior
+  - info popup and yes/no popup
+  - pivot helpers for anchoring UI
+- renderer primitives:
+  - pixel, line, rect, rect outline, transparent rect
+  - horizontal line, circle, flood fill
+  - frame timing (`dt`) and FPS cap
+- mouse input edge detection (`pressed`, `right_pressed`)
+- theme-driven look (`src/themes/mil.zig`):
+  - color palette
+  - menu spacing/sizing constants
+  - UI font scales
+- example VFX scene with interactive popup/menu actions
 
 ## Credits
 
