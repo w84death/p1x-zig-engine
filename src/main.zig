@@ -57,12 +57,10 @@ pub fn main() void {
     };
 
     var menu = MenuScene.init(&fui, &sm, &menu_groups);
-    var about = AboutScene.init(&fui, &sm, State.main_menu);
-    var example = ExampleScene.init(&fui, &sm, State.main_menu);
+    var about = AboutScene.init(&fui);
+    var example = ExampleScene.init(&fui);
 
-    var close_application = false;
-
-    while (!close_application and c.fenster_loop(&f) == 0) {
+    while (c.fenster_loop(&f) == 0) {
         sm.update();
         renderer.begin_frame();
         renderer.clear_background(THEME.BG);
@@ -74,13 +72,13 @@ pub fn main() void {
                 menu.draw(mouse);
             },
             State.example => {
-                example.draw(mouse, renderer.dt);
+                example.draw(renderer.dt);
             },
             State.about => {
-                about.draw(mouse);
+                about.draw();
             },
             State.quit => {
-                close_application = true;
+                break;
             },
         }
 
@@ -88,9 +86,8 @@ pub fn main() void {
             break;
         }
 
-        // top nav
-        if (!sm.is(State.main_menu) and fui.button(fui.pivotX(.top_right) - 80, fui.pivotY(.top_right), 80, 32, "Quit", THEME.MENU_NORMAL, mouse)) {
-            sm.go_to(State.quit);
+        if (!sm.is(State.main_menu) and fui.button(fui.pivotX(.top_left), fui.pivotY(.top_left), 120, 32, "< Menu", THEME.MENU_SECONDARY, mouse)) {
+            sm.go_to(State.main_menu);
         }
 
         fui.draw_version();

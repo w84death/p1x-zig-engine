@@ -1,26 +1,22 @@
 const CONF = @import("../engine/config.zig").CONF;
 const THEME = @import("../themes/mil.zig").Theme;
 const Fui = @import("../engine/fui.zig").Fui;
-const Mouse = @import("../engine/mouse.zig").Mouse;
 
 pub fn AboutScene(comptime State: type, comptime StateMachine: type) type {
+    _ = State;
+    _ = StateMachine;
     return struct {
         const Self = @This();
 
         fui: *Fui,
-        sm: *StateMachine,
-        back_target_state: State,
 
-        pub fn init(fui: *Fui, sm: *StateMachine, back_target_state: State) Self {
-            return Self{ .fui = fui, .sm = sm, .back_target_state = back_target_state };
+        pub fn init(fui: *Fui) Self {
+            return Self{ .fui = fui };
         }
 
-        pub fn draw(self: *Self, mouse: Mouse) void {
+        pub fn draw(self: *Self) void {
             const px = self.fui.pivotX(.top_left);
             const py = self.fui.pivotY(.top_left);
-            if (self.fui.button(px, py, 120, 32, "< Menu", THEME.MENU_SECONDARY, mouse)) {
-                self.sm.go_to(self.back_target_state);
-            }
 
             var ay: i32 = py + 64;
             const lines = [_][:0]const u8{
