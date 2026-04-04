@@ -7,10 +7,9 @@ const Sprite = @import("../engine/sprites.zig").Sprite;
 const SpriteSheet = @import("../engine/sprites.zig").SpriteSheet;
 const StateMachine = @import("../engine/state.zig").StateMachine;
 
-const SPRITE_EXAMPLE_BOROWIK_PATH = "sprites/borowik.bmp";
-const SPRITE_EXAMPLE_TILE_W = 32;
-const SPRITE_EXAMPLE_TILE_H = 32;
-const SPRITE_EXAMPLE_FRAME_DURATION = 0.12;
+const SPRITE_PATH = "sprites/borowik.bmp";
+const SPRITE_SIZE = 32;
+const SPRITE_FRAME_DURATION = 0.12;
 
 pub fn ExampleScene(comptime Theme: type) type {
     const Fui = @import("../engine/fui.zig").Fui(Theme);
@@ -45,7 +44,6 @@ pub fn ExampleScene(comptime Theme: type) type {
         action_menu: ActionMenu,
         sprite_sheet: ?SpriteSheet,
         sprite_anim: ?Sprite,
-        sprite_ready: bool,
         last_yes_no: ?bool = null,
 
         pub fn init(fui: *Fui) Self {
@@ -56,13 +54,11 @@ pub fn ExampleScene(comptime Theme: type) type {
             self.action_menu = ActionMenu.init(fui, &action_groups);
             self.sprite_sheet = null;
             self.sprite_anim = null;
-            self.sprite_ready = false;
-            if (SpriteSheet.load_bmp_default_transparency(std.heap.c_allocator, SPRITE_EXAMPLE_BOROWIK_PATH, SPRITE_EXAMPLE_TILE_W, SPRITE_EXAMPLE_TILE_H)) |sheet| {
+            if (SpriteSheet.load_bmp_default_transparency(std.heap.c_allocator, SPRITE_PATH, SPRITE_SIZE, SPRITE_SIZE)) |sheet| {
                 self.sprite_sheet = sheet;
-                self.sprite_anim = Sprite.init(&self.sprite_sheet.?, &sprite_frames, SPRITE_EXAMPLE_FRAME_DURATION, true);
-                self.sprite_ready = true;
+                self.sprite_anim = Sprite.init(&self.sprite_sheet.?, &sprite_frames, SPRITE_FRAME_DURATION, true);
             } else |err| {
-                std.log.err("failed to load sprite sheet {s}: {s}", .{ SPRITE_EXAMPLE_BOROWIK_PATH, @errorName(err) });
+                std.log.err("failed to load sprite sheet {s}: {s}", .{ SPRITE_PATH, @errorName(err) });
             }
             self.last_yes_no = null;
             return self;
@@ -74,7 +70,6 @@ pub fn ExampleScene(comptime Theme: type) type {
                 self.sprite_sheet = null;
             }
             self.sprite_anim = null;
-            self.sprite_ready = false;
         }
 
         pub fn draw(self: *Self, mouse: Mouse, dt: f32, renderer: *Render) void {
@@ -88,8 +83,8 @@ pub fn ExampleScene(comptime Theme: type) type {
 
             if (self.sprite_anim) |*sprite| {
                 sprite.update(dt);
-                const sx = self.fui.pivotX(.top_right) - SPRITE_EXAMPLE_TILE_W;
-                const sy = self.fui.pivotY(.top_right) + SPRITE_EXAMPLE_TILE_H;
+                const sx = self.fui.pivotX(.top_right) - SPRITE_SIZE;
+                const sy = self.fui.pivotY(.top_right) + SPRITE_SIZE;
                 sprite.draw(renderer, sx, sy);
             }
 
