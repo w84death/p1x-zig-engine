@@ -15,12 +15,14 @@ const Fui = @import("engine/fui.zig").Fui;
 const MouseButtons = @import("engine/mouse.zig").MouseButtons;
 const State = enum {
     main_menu,
+    example,
     about,
     quit,
 };
 const StateMachine = @import("engine/state.zig").StateMachine(State);
 const MenuScene = @import("scenes/menu.zig").MenuScene(State, StateMachine);
 const AboutScene = @import("scenes/about.zig").AboutScene(State, StateMachine);
+const ExampleScene = @import("scenes/example.zig").ExampleScene(State, StateMachine);
 
 pub fn main() void {
     var buf: [CONF.SCREEN_W * CONF.SCREEN_H]u32 = undefined;
@@ -42,7 +44,7 @@ pub fn main() void {
         .{
             .title = "Main Menu",
             .items = &[_]MenuScene.MenuItem{
-                .{ .text = "Start", .color = THEME.MENU_NORMAL, .target_state = State.main_menu },
+                .{ .text = "Example", .color = THEME.MENU_NORMAL, .target_state = State.example },
             },
         },
         .{
@@ -56,6 +58,7 @@ pub fn main() void {
 
     var menu = MenuScene.init(&fui, &sm, &menu_groups);
     var about = AboutScene.init(&fui, &sm, State.main_menu);
+    var example = ExampleScene.init(&fui, &sm, State.main_menu);
 
     var close_application = false;
 
@@ -70,6 +73,9 @@ pub fn main() void {
             State.main_menu => {
                 menu.draw(mouse);
             },
+            State.example => {
+                example.draw(mouse, renderer.dt);
+            },
             State.about => {
                 about.draw(mouse);
             },
@@ -82,7 +88,7 @@ pub fn main() void {
             break;
         }
 
-        // Quit
+        // top nav
         if (!sm.is(State.main_menu) and fui.button(fui.pivotX(.top_right) - 80, fui.pivotY(.top_right), 80, 32, "Quit", THEME.MENU_NORMAL, mouse)) {
             sm.go_to(State.quit);
         }
