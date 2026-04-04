@@ -1,5 +1,5 @@
 // *************************************
-// P1X ZIG ENGINE
+// BOROWIK ENGINE
 // by Krzysztof Krystian Jankowski
 // github.com/w84death/p1x-zig-engine
 // *************************************

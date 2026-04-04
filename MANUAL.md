@@ -1,4 +1,4 @@
-# P1X Zig Engine Manual
+# Borowik Engine Manual
 
 This manual covers installation, requirements, architecture, and practical usage examples for the current codebase.
 

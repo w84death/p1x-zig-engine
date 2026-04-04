@@ -5,7 +5,7 @@ pub fn AboutScene() type {
     return struct {
         const Self = @This();
         const lines = [_][:0]const u8{
-            "P1X ZE is an Zig Engine for creating small",
+            "Borowik is an Zig Engine for creating small",
             "applications for Linux and Windows.",
             "",
             "",

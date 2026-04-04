@@ -1,4 +1,4 @@
-# P1X Zig Engine
+# Borowik Engine
 
 ![Main window](screenshot.png)
 

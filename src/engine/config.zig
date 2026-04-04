@@ -1,13 +1,13 @@
 // *************************************
-// P1X ZIG ENGINE
+// BOROWIK ENGINE
 // by Krzysztof Krystian Jankowski
 // github.com/w84death/p1x-zig-engine
 // *************************************
 
 pub const CONF = struct {
     pub const VERSION = "1.0-RC4";
-    pub const THE_NAME = "P1X ZE";
-    pub const TAG_LINE = "Create something awesome.";
+    pub const THE_NAME = "Borowik";
+    pub const TAG_LINE = "Grow something awesome.";
     pub const SCREEN_W = 800;
     pub const SCREEN_H = 600;
     pub const TARGET_FPS = 60.0;

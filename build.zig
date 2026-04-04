@@ -1,5 +1,5 @@
 const std = @import("std");
-const filename = "p1x-ze";
+const filename = "borowik";
 
 fn configureLinks(exe: *std.Build.Step.Compile, os_tag: std.Target.Os.Tag) void {
     switch (os_tag) {
