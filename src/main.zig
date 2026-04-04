@@ -73,7 +73,7 @@ pub fn main() void {
     while (c.fenster_loop(&f) == 0) {
         sm.update();
         renderer.begin_frame();
-        renderer.clear_background(THEME.BG_COLOR);
+        if (!sm.is(.example)) renderer.clear_background(THEME.BG_COLOR);
 
         const mouse = mouse_buttons.update(f.x, f.y, @intCast(f.mouse));
 

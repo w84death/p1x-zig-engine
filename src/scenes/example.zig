@@ -11,6 +11,8 @@ const SPRITE_PATH = "sprites/borowik.bmp";
 const SPRITE_SIZE = 32;
 const SPRITE_FRAME_DURATION = 0.12;
 const SPRITE_ANIM_LEN = 3;
+const SPRITE_FOLLOW_CURSOR_CHANCE = 3;
+const EXAMPLE_BG_COLOR = 0x4B692f;
 
 pub fn ExampleScene(comptime Theme: type) type {
     const Fui = @import("../engine/fui.zig").Fui(Theme);
@@ -95,6 +97,7 @@ pub fn ExampleScene(comptime Theme: type) type {
 
         pub fn draw(self: *Self, mouse: Mouse, dt: f32, renderer: *Render) void {
             self.action_state.update();
+            renderer.clear_background(EXAMPLE_BG_COLOR);
             if (self.vfx_enabled) {
                 self.vfx.draw(renderer, Theme.SECONDARY_COLOR, dt);
             }
@@ -104,7 +107,19 @@ pub fn ExampleScene(comptime Theme: type) type {
             const ty = self.fui.pivotY(.center) - 160;
             self.fui.draw_text(renderer, title, tx, ty, Theme.FONT_MEDIUM, Theme.PRIMARY_COLOR);
 
+            const rand = self.prng.random();
             for (self.sprites.items) |*instance| {
+                if (rand.intRangeAtMost(i32, 0, 10) < SPRITE_FOLLOW_CURSOR_CHANCE) {
+                    if (mouse.x > instance.x) instance.x += rand.intRangeAtMost(i32, 0, 2);
+                    if (mouse.x < instance.x) instance.x -= rand.intRangeAtMost(i32, 0, 2);
+                    if (mouse.y > instance.y) instance.y += rand.intRangeAtMost(i32, 0, 2);
+                    if (mouse.y < instance.y) instance.y -= rand.intRangeAtMost(i32, 0, 2);
+                } else {
+                    const test_x = instance.x + rand.intRangeAtMost(i32, -2, 2);
+                    if (test_x > 0 and test_x < CONF.SCREEN_W - SPRITE_SIZE) instance.x = test_x;
+                    const test_y = instance.y + rand.intRangeAtMost(i32, -2, 2);
+                    if (test_y > 0 and test_y < CONF.SCREEN_W - SPRITE_SIZE) instance.y = test_y;
+                }
                 instance.sprite.update(dt);
                 instance.sprite.draw(renderer, instance.x, instance.y);
             }
