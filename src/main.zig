@@ -11,7 +11,7 @@ const c = @cImport({
 });
 const CONF = @import("engine/config.zig").CONF;
 const THEME = @import("themes/mil.zig").Theme;
-const Fui = @import("engine/fui.zig").Fui;
+const Fui = @import("engine/fui.zig").Fui(THEME);
 const MouseButtons = @import("engine/mouse.zig").MouseButtons;
 const State = enum {
     main_menu,
@@ -20,12 +20,12 @@ const State = enum {
     quit,
 };
 const StateMachine = @import("engine/state.zig").StateMachine(State);
-const Menu = @import("engine/menu.zig").Menu(State, StateMachine);
+const Menu = @import("engine/menu.zig").Menu(State, StateMachine, THEME);
 
 // Scenes
-const MenuScene = @import("scenes/menu.zig").MenuScene(Menu);
-const AboutScene = @import("scenes/about.zig").AboutScene();
-const ExampleScene = @import("scenes/example.zig").ExampleScene();
+const MenuScene = @import("scenes/menu.zig").MenuScene(Menu, THEME);
+const AboutScene = @import("scenes/about.zig").AboutScene(THEME);
+const ExampleScene = @import("scenes/example.zig").ExampleScene(THEME);
 
 pub fn main() void {
     var buf: [CONF.SCREEN_W * CONF.SCREEN_H]u32 = undefined;

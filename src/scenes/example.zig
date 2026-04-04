@@ -1,11 +1,10 @@
-const THEME = @import("../themes/mil.zig").Theme;
-const Fui = @import("../engine/fui.zig").Fui;
 const Mouse = @import("../engine/mouse.zig").Mouse;
 const Menu = @import("../engine/menu.zig").Menu;
 const StateMachine = @import("../engine/state.zig").StateMachine;
-const Vfx = @import("../logic/vfx.zig").Vfx;
 
-pub fn ExampleScene() type {
+pub fn ExampleScene(comptime Theme: type) type {
+    const Fui = @import("../engine/fui.zig").Fui(Theme);
+    const Vfx = @import("../logic/vfx.zig").Vfx(Theme);
     const Action = enum {
         none,
         info_popup,
@@ -13,7 +12,7 @@ pub fn ExampleScene() type {
         reset_effect,
     };
     const ActionState = StateMachine(Action);
-    const ActionMenu = Menu(Action, ActionState);
+    const ActionMenu = Menu(Action, ActionState, Theme);
 
     return struct {
         const Self = @This();
@@ -22,9 +21,9 @@ pub fn ExampleScene() type {
             .{
                 .title = "Example Menu",
                 .items = &[_]ActionMenu.MenuItem{
-                    .{ .text = "Info Popup", .color = THEME.MENU_NORMAL_COLOR, .target_state = Action.info_popup },
-                    .{ .text = "Ask Yes/No", .color = THEME.MENU_NORMAL_COLOR, .target_state = Action.yes_no_popup },
-                    .{ .text = "Reset Effect", .color = THEME.MENU_SECONDARY_COLOR, .target_state = Action.reset_effect },
+                    .{ .text = "Info Popup", .color = Theme.MENU_NORMAL_COLOR, .target_state = Action.info_popup },
+                    .{ .text = "Ask Yes/No", .color = Theme.MENU_NORMAL_COLOR, .target_state = Action.yes_no_popup },
+                    .{ .text = "Reset Effect", .color = Theme.MENU_SECONDARY_COLOR, .target_state = Action.reset_effect },
                 },
             },
         };
@@ -47,16 +46,16 @@ pub fn ExampleScene() type {
 
         pub fn draw(self: *Self, mouse: Mouse, dt: f32) void {
             self.action_state.update();
-            self.vfx.draw(THEME.SECONDARY_COLOR, dt);
+            self.vfx.draw(Theme.SECONDARY_COLOR, dt);
 
             const title = "Example Scene";
-            const tx = self.fui.pivotX(.center) - self.fui.text_center(title, THEME.FONT_MEDIUM)[0];
+            const tx = self.fui.pivotX(.center) - self.fui.text_center(title, Theme.FONT_MEDIUM)[0];
             const ty = self.fui.pivotY(.center) - 128;
-            self.fui.draw_text(title, tx, ty, THEME.FONT_MEDIUM, THEME.PRIMARY_COLOR);
+            self.fui.draw_text(title, tx, ty, Theme.FONT_MEDIUM, Theme.PRIMARY_COLOR);
 
             switch (self.action_state.current) {
                 .info_popup => {
-                    if (self.fui.info_popup("Information popup example", mouse, THEME.POPUP_COLOR) != null) {
+                    if (self.fui.info_popup("Information popup example", mouse, Theme.POPUP_COLOR) != null) {
                         self.action_state.go_to(Action.none);
                     }
                 },
@@ -82,7 +81,7 @@ pub fn ExampleScene() type {
                 "Last choice: Yes"
             else
                 "Last choice: No";
-            self.fui.draw_text(status, mx, ty + 290, THEME.FONT_DEFAULT, THEME.SECONDARY_COLOR);
+            self.fui.draw_text(status, mx, ty + 290, Theme.FONT_DEFAULT, Theme.SECONDARY_COLOR);
         }
     };
 }
