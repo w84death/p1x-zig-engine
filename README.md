@@ -8,6 +8,12 @@ The name comes from **borowik** ([boletus mushroom](https://en.wikipedia.org/wik
 
 See full usage and architecture docs in [MANUAL.md](MANUAL.md).
 
+## Example Scene
+
+10000 sprites test. Each sprite follows cursor and leaves trail on the terrain.
+
+![10K benchmark](10k.png)
+
 ## Engine Features
 
 - software rendering with `fenster` backend
