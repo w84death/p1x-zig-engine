@@ -20,7 +20,7 @@ pub const Theme = struct {
     pub const SHADOW_COLOR = 0x243057;
     pub const LIGHT_COLOR = 0xFFF2A8;
 
-    pub const MENU_TEXT_COLOR = 0x1F2A44;
+    pub const MENU_TEXT_COLOR = 0xEE33E0;
     pub const MENU_FRAME_COLOR = 0xFFEFC2;
     pub const MENU_FRAME_HOVER_COLOR = 0xFF72B7;
     pub const MENU_NORMAL_COLOR = 0xFFF8E3;
