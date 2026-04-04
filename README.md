@@ -4,6 +4,8 @@
 
 Simple Zig engine project using the [fenster](https://github.com/zserge/fenster) software renderer.
 
+The name comes from **borowik** ([boletus mushroom]()https://en.wikipedia.org/wiki/Boletus). 
+
 See full usage and architecture docs in [MANUAL.md](MANUAL.md).
 
 ## Engine Features
