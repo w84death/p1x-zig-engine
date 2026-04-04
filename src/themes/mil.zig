@@ -38,7 +38,6 @@ pub const Theme = struct {
 
     pub const PIVOT_PADDING = 24;
 
-    pub const FONT_SMOL = 1;
     pub const FONT_DEFAULT = 2;
     pub const FONT_MEDIUM = 4;
     pub const FONT_BIG = 8;
