@@ -46,6 +46,7 @@ pub fn main() void {
     var fui = Fui.init();
     var sm = StateMachine.init(State.main_menu);
     var fps_text_buf: [32]u8 = undefined;
+    var smoothed_fps: f32 = CONF.TARGET_FPS;
     var esc_lock = false;
 
     const menu_groups = [_]Menu.MenuGroup{
@@ -108,7 +109,12 @@ pub fn main() void {
 
         // Bottom global info
         fui.draw_version(&renderer);
-        const fps: i32 = if (renderer.dt > 0.0) @intFromFloat(@round(1.0 / renderer.dt)) else 0;
+        if (renderer.dt > 0.0) {
+            const instant_fps: f32 = 1.0 / renderer.dt;
+            const alpha: f32 = 0.1;
+            smoothed_fps += (instant_fps - smoothed_fps) * alpha;
+        }
+        const fps: i32 = @intFromFloat(@round(smoothed_fps));
         const fps_text = std.fmt.bufPrint(&fps_text_buf, "FPS: {d}", .{fps}) catch "FPS: ?";
         fui.draw_text(&renderer, fps_text, fui.pivotX(.bottom_left), fui.pivotY(.bottom_left), THEME.FONT_DEFAULT, THEME.SECONDARY_COLOR);
         fui.draw_cursor_lines(&renderer, .{ f.x, f.y });
