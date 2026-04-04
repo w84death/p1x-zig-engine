@@ -39,6 +39,7 @@ pub fn main() void {
     var renderer = &fui.renderer;
     var sm = StateMachine.init(State.main_menu);
     var fps_text_buf: [32]u8 = undefined;
+    var esc_lock = false;
 
     const menu_groups = [_]MenuScene.MenuGroup{
         .{
@@ -67,6 +68,15 @@ pub fn main() void {
 
         const mouse = mouse_buttons.update(f.x, f.y, @intCast(f.mouse));
 
+        // ESC handler
+        if (esc_lock and f.keys[27] == 0) {
+            esc_lock = false;
+        } else if (!esc_lock and f.keys[27] != 0) {
+            esc_lock = true;
+            if (!sm.is(State.main_menu)) sm.go_to(State.main_menu) else break;
+        }
+
+        // State switcher
         switch (sm.current) {
             State.main_menu => {
                 menu.draw(mouse);
@@ -82,10 +92,7 @@ pub fn main() void {
             },
         }
 
-        if (f.keys[27] != 0) {
-            break;
-        }
-
+        // Top global navigation
         if (!sm.is(State.main_menu) and fui.button(fui.pivotX(.top_left), fui.pivotY(.top_left), 120, 32, "< Menu", THEME.MENU_SECONDARY, mouse)) {
             sm.go_to(State.main_menu);
         }
