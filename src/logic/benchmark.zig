@@ -7,11 +7,13 @@ const SpriteSheet = @import("../engine/sprites.zig").SpriteSheet;
 const SPRITE_DIR_HOLD_MIN = 0.4;
 const SPRITE_DIR_HOLD_MAX = 1.0;
 const SPRITE_CURSOR_TURN_CHANCE = 72;
-const TERRAIN_SPLAT_COUNT = 1000;
-const EXAMPLE_BG_COLOR = 0x4b692f;
+const TERRAIN_SPLAT_COUNT = 2048;
+const PLANTS_SPLAT_COUNT = 128;
+const EXAMPLE_BG_COLOR = 0x595652;
 const TERRAIN_WEAR_DARKEN = 8;
 const ANIMATED_DEF_INDEX: usize = 0;
-const TERRAIN_DEF_INDEX: usize = 1;
+const TERRAIN_DEF_INDEX: usize = 2;
+const PLANTS_DEF_INDEX: usize = 1;
 const TERRAIN_HOLE_DEF_INDEX: usize = 2;
 
 pub const BenchmarkLogic = struct {
@@ -76,12 +78,12 @@ pub const BenchmarkLogic = struct {
                 .speed_max = 52.0,
             },
             .{
-                .asset_name = "terrain.bmp",
-                .sprite_data = @embedFile("../sprites/terrain.bmp"),
+                .asset_name = "plants.bmp",
+                .sprite_data = @embedFile("../sprites/plants.bmp"),
                 .sprite_sheet = null,
-                .sprite_size = 32,
+                .sprite_size = 64,
                 .sprite_anim_start = 0,
-                .sprite_anim_len = 8,
+                .sprite_anim_len = 5,
                 .sprite_anim_dur = 0,
                 .speed_min = 0,
                 .speed_max = 0,
@@ -90,9 +92,9 @@ pub const BenchmarkLogic = struct {
                 .asset_name = "terrain.bmp",
                 .sprite_data = @embedFile("../sprites/terrain.bmp"),
                 .sprite_sheet = null,
-                .sprite_size = 32,
-                .sprite_anim_start = 8,
-                .sprite_anim_len = 6,
+                .sprite_size = 64,
+                .sprite_anim_start = 0,
+                .sprite_anim_len = 7,
                 .sprite_anim_dur = 0,
                 .speed_min = 0,
                 .speed_max = 0,
@@ -284,25 +286,47 @@ pub const BenchmarkLogic = struct {
 
     fn init_terrain(self: *Self, renderer: *Render) void {
         renderer.clear_buffer(.terrain, EXAMPLE_BG_COLOR);
-
-        const terrain_def = &self.sprite_defs[TERRAIN_DEF_INDEX];
-        const terrain_sheet = terrain_def.sprite_sheet orelse return;
-
         renderer.set_target(.terrain);
         defer renderer.set_target(.frame);
-        var stamp = Sprite.init(terrain_sheet, 0.0);
-        stamp.set_animation(terrain_def.sprite_anim_start, terrain_def.sprite_anim_len, 0.0, true) catch return;
 
         const rand = self.prng.random();
-        const max_x = @max(0, self.screen_width - terrain_def.sprite_size);
-        const max_y = @max(0, self.screen_height - terrain_def.sprite_size);
 
-        var i: usize = 0;
-        while (i < TERRAIN_SPLAT_COUNT) : (i += 1) {
-            stamp.current_offset = rand.intRangeAtMost(usize, 0, terrain_def.sprite_anim_len - 1);
-            const x = rand.intRangeAtMost(i32, 0, max_x);
-            const y = rand.intRangeAtMost(i32, 0, max_y);
-            stamp.draw(renderer, x, y);
+        const terrain_def = &self.sprite_defs[TERRAIN_DEF_INDEX];
+        if (terrain_def.sprite_sheet) |terrain_sheet| {
+            if (terrain_def.sprite_anim_len > 0) {
+                var terrain_stamp = Sprite.init(terrain_sheet, 0.0);
+                terrain_stamp.set_animation(terrain_def.sprite_anim_start, terrain_def.sprite_anim_len, 0.0, true) catch {};
+
+                const terrain_max_x = @max(-terrain_def.sprite_size, self.screen_width);
+                const terrain_max_y = @max(-terrain_def.sprite_size, self.screen_height);
+
+                var i: usize = 0;
+                while (i < TERRAIN_SPLAT_COUNT) : (i += 1) {
+                    terrain_stamp.current_offset = rand.intRangeAtMost(usize, 0, terrain_def.sprite_anim_len - 1);
+                    const x = rand.intRangeAtMost(i32, 0, terrain_max_x);
+                    const y = rand.intRangeAtMost(i32, 0, terrain_max_y);
+                    terrain_stamp.draw(renderer, x, y);
+                }
+            }
+        }
+
+        const plants_def = &self.sprite_defs[PLANTS_DEF_INDEX];
+        if (plants_def.sprite_sheet) |plants_sheet| {
+            if (plants_def.sprite_anim_len > 0) {
+                var plants_stamp = Sprite.init(plants_sheet, 0.0);
+                plants_stamp.set_animation(plants_def.sprite_anim_start, plants_def.sprite_anim_len, 0.0, true) catch {};
+
+                const plants_max_x = @max(-@divFloor(plants_def.sprite_size, 2), self.screen_width - @divFloor(plants_def.sprite_size, 2));
+                const plants_max_y = @max(-@divFloor(plants_def.sprite_size, 2), self.screen_height - @divFloor(plants_def.sprite_size, 2));
+
+                var i: usize = 0;
+                while (i < PLANTS_SPLAT_COUNT) : (i += 1) {
+                    plants_stamp.current_offset = rand.intRangeAtMost(usize, 0, plants_def.sprite_anim_len - 1);
+                    const x = rand.intRangeAtMost(i32, 0, plants_max_x);
+                    const y = rand.intRangeAtMost(i32, 0, plants_max_y);
+                    plants_stamp.draw(renderer, x, y);
+                }
+            }
         }
     }
 
