@@ -4,6 +4,8 @@
 // github.com/w84death/borowik-engine
 // *************************************
 
+const A = @import("../engine/audio.zig");
+
 pub const Theme = struct {
     pub const BG_COLOR = 0xF7FAFF;
     pub const PRIMARY_COLOR = 0x2E6BFF;
@@ -49,4 +51,29 @@ pub const Theme = struct {
     pub const FONT_BIG = 4;
     pub const FONT_PERF = 1;
     pub const FONT_PERFLINE_HEIGHT = 10;
+
+    pub const SFX_MENU_MAIN = [_]A.Note{
+        .{ .id = A.NOTE_C5, .dur = 0.04 },
+        .{ .id = A.NOTE_E5, .dur = 0.04 },
+        .{ .id = A.NOTE_G5, .dur = 0.05 },
+    };
+
+    pub const SFX_MENU_BACK = [_]A.Note{
+        .{ .id = A.NOTE_G4, .dur = 0.035 },
+        .{ .id = A.NOTE_E4, .dur = 0.035 },
+        .{ .id = A.NOTE_C4, .dur = 0.045 },
+    };
+
+    pub const SFX_EXPLOSION = [_]A.Note{
+        .{ .id = A.NOTE_A5, .dur = 0.03 },
+        .{ .id = A.NOTE_F5, .dur = 0.03 },
+        .{ .id = A.NOTE_C6, .dur = 0.03 },
+        .{ .id = A.NOTE_DS5, .dur = 0.03 },
+        .{ .id = A.NOTE_G5, .dur = 0.03 },
+        .{ .id = A.NOTE_REST, .dur = 0.02 },
+        .{ .id = A.NOTE_B5, .dur = 0.03 },
+        .{ .id = A.NOTE_D6, .dur = 0.03 },
+        .{ .id = A.NOTE_FS5, .dur = 0.03 },
+        .{ .id = A.NOTE_AS5, .dur = 0.04 },
+    };
 };

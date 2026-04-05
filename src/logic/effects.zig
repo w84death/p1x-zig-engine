@@ -2,6 +2,8 @@ const std = @import("std");
 const Render = @import("../engine/render.zig").Render;
 const ParticleSystem = @import("../engine/particles.zig").ParticleSystem;
 const SpriteSheet = @import("../engine/sprites.zig").SpriteSheet;
+const Sfx = @import("sfx.zig").Sfx;
+const SfxEffect = @import("sfx.zig").Effect;
 
 const EXPLOSION_TILE_SIZE = 32;
 const EXPLOSION_FRAME_COUNT: u8 = 8;
@@ -9,12 +11,14 @@ const EXPLOSION_FRAME_DURATION: f32 = 0.133;
 
 pub const Effects = struct {
     allocator: std.mem.Allocator,
+    sfx: *Sfx,
     particles: ParticleSystem,
     explosion_sheet: ?*SpriteSheet,
 
-    pub fn init(allocator: std.mem.Allocator, max_particles: usize) Effects {
+    pub fn init(allocator: std.mem.Allocator, sfx: *Sfx, max_particles: usize) Effects {
         var self = Effects{
             .allocator = allocator,
+            .sfx = sfx,
             .particles = ParticleSystem.init(allocator, max_particles),
             .explosion_sheet = null,
         };
@@ -41,6 +45,7 @@ pub const Effects = struct {
     }
 
     pub fn spawn_explosion(self: *Effects, x: i32, y: i32) void {
+        self.sfx.play(SfxEffect.explosion);
         self.particles.spawn(.{
             .x = @floatFromInt(x),
             .y = @floatFromInt(y),

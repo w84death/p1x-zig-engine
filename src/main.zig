@@ -16,7 +16,9 @@ const Audio = @import("engine/audio.zig").Audio;
 const ProcAudio = @import("engine/proc_audio.zig").ProcAudio;
 const Sprite = @import("engine/sprites.zig").Sprite;
 const SpriteSheet = @import("engine/sprites.zig").SpriteSheet;
-const THEME = @import("themes/mil.zig").Theme;
+const Sfx = @import("logic/sfx.zig").Sfx;
+const SfxEffect = @import("logic/sfx.zig").Effect;
+const THEME = @import("themes/default.zig").Theme;
 //const THEME = @import("themes/smol.zig").Theme;
 //const THEME = @import("themes/shroom.zig").Theme;
 //const THEME = @import("themes/gray.zig").Theme;
@@ -65,6 +67,7 @@ pub fn main() void {
     defer renderer.deinit();
     var audio = Audio.init();
     defer audio.deinit();
+    var sfx = Sfx.init(&audio, THEME.SFX_MENU_MAIN[0..], THEME.SFX_MENU_BACK[0..], THEME.SFX_EXPLOSION[0..]);
     var proc_audio = ProcAudio.init(std.heap.c_allocator);
     defer proc_audio.deinit();
     var logo_sheet: ?*SpriteSheet = null;
@@ -112,12 +115,18 @@ pub fn main() void {
     const core_menu = Menu.init(&fui, &menu_groups);
     var menu = MenuScene.init(&fui, &sm, core_menu);
     var about = AboutScene.init(&fui);
-    var example = ExampleScene.init(std.heap.c_allocator, &fui, &renderer, &audio, &proc_audio);
+    var example = ExampleScene.init(std.heap.c_allocator, &fui, &renderer, &audio, &proc_audio, &sfx);
     defer example.deinit();
+
+    var prev_state = sm.current;
 
     while (c.fenster_loop(&f) == 0) {
         renderer.perf_begin_sim();
         sm.update();
+        if (prev_state == .main_menu and sm.current != .main_menu) {
+            sfx.play(SfxEffect.menu_main);
+        }
+        prev_state = sm.current;
         renderer.begin_frame();
         if (!sm.is(.example)) renderer.clear_background(THEME.BG_COLOR);
 
@@ -161,6 +170,7 @@ pub fn main() void {
 
         // Top global navigation
         if (!sm.is(State.main_menu) and fui.button(&renderer, fui.pivotX(.top_left), fui.pivotY(.top_left), 120, 32, "< Menu", THEME.MENU_SECONDARY_COLOR, THEME.MENU_HIGHLIGHT_COLOR, mouse)) {
+            sfx.play(SfxEffect.menu_back);
             sm.go_to(State.main_menu);
         }
 

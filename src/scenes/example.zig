@@ -2,6 +2,8 @@ const std = @import("std");
 const Audio = @import("../engine/audio.zig").Audio;
 const ProcAudio = @import("../engine/proc_audio.zig").ProcAudio;
 const ProcAudioProfile = @import("../engine/proc_audio.zig").Profile;
+const Sfx = @import("../logic/sfx.zig").Sfx;
+const SfxEffect = @import("../logic/sfx.zig").Effect;
 const Mouse = @import("../engine/mouse.zig").Mouse;
 const Menu = @import("../engine/menu.zig").Menu;
 const Render = @import("../engine/render.zig").Render;
@@ -60,6 +62,7 @@ pub fn ExampleScene(comptime Theme: type) type {
         effects: Effects,
         audio: *Audio,
         proc_audio: *ProcAudio,
+        sfx: *Sfx,
         action_state: ActionState,
         action_menu: ActionMenu,
         vfx_enabled: bool,
@@ -67,14 +70,15 @@ pub fn ExampleScene(comptime Theme: type) type {
         ui_visible: bool,
         last_yes_no: ?bool = null,
 
-        pub fn init(allocator: std.mem.Allocator, fui: *Fui, renderer: *Render, audio: *Audio, proc_audio: *ProcAudio) Self {
+        pub fn init(allocator: std.mem.Allocator, fui: *Fui, renderer: *Render, audio: *Audio, proc_audio: *ProcAudio, sfx: *Sfx) Self {
             return .{
                 .fui = fui,
                 .vfx = Vfx.init(renderer.width, renderer.height),
                 .benchmark = Benchmark.init(allocator, renderer),
-                .effects = Effects.init(allocator, EFFECTS_MAX_PARTICLES),
+                .effects = Effects.init(allocator, sfx, EFFECTS_MAX_PARTICLES),
                 .audio = audio,
                 .proc_audio = proc_audio,
+                .sfx = sfx,
                 .action_state = ActionState.init(Action.none),
                 .action_menu = ActionMenu.init(fui, &action_groups),
                 .vfx_enabled = false,
@@ -115,6 +119,7 @@ pub fn ExampleScene(comptime Theme: type) type {
         fn handle_top_controls(self: *Self, mouse: Mouse, renderer: *Render) void {
             const ui_toggle_text: [:0]const u8 = if (self.ui_visible) "Hide UI" else "Show UI";
             if (self.fui.button(renderer, self.fui.pivotX(.top_right) - 140, self.fui.pivotY(.top_right), 136, 32, ui_toggle_text, Theme.MENU_SECONDARY_COLOR, Theme.MENU_HIGHLIGHT_COLOR, mouse)) {
+                self.sfx.play(if (self.ui_visible) SfxEffect.menu_back else SfxEffect.menu_main);
                 self.ui_visible = !self.ui_visible;
                 if (!self.ui_visible) {
                     self.action_state.go_to(Action.none);
@@ -127,22 +132,27 @@ pub fn ExampleScene(comptime Theme: type) type {
 
             switch (self.action_state.current) {
                 .toggle_vfx => {
+                    self.sfx.play(SfxEffect.menu_main);
                     self.vfx_enabled = !self.vfx_enabled;
                     self.action_state.go_to(Action.none);
                 },
                 .toggle_sprite_trails => {
+                    self.sfx.play(SfxEffect.menu_main);
                     self.benchmark.toggle_sprite_trails();
                     self.action_state.go_to(Action.none);
                 },
                 .toggle_cursor_follow => {
+                    self.sfx.play(SfxEffect.menu_main);
                     self.benchmark.toggle_cursor_follow();
                     self.action_state.go_to(Action.none);
                 },
                 .toggle_simulation => {
+                    self.sfx.play(SfxEffect.menu_main);
                     self.benchmark.toggle_simulation();
                     self.action_state.go_to(Action.none);
                 },
                 .toggle_explosions => {
+                    self.sfx.play(SfxEffect.menu_main);
                     self.explosions_enabled = !self.explosions_enabled;
                     self.action_state.go_to(Action.none);
                 },
@@ -156,14 +166,17 @@ pub fn ExampleScene(comptime Theme: type) type {
                     self.action_state.go_to(Action.none);
                 },
                 .spawn_sprite => {
+                    self.sfx.play(SfxEffect.menu_main);
                     self.benchmark.spawn_one();
                     self.action_state.go_to(Action.none);
                 },
                 .spawn_100_sprites => {
+                    self.sfx.play(SfxEffect.menu_main);
                     self.benchmark.spawn_many(100);
                     self.action_state.go_to(Action.none);
                 },
                 .spawn_10k_sprites => {
+                    self.sfx.play(SfxEffect.menu_main);
                     self.benchmark.spawn_many(10000);
                     self.action_state.go_to(Action.none);
                 },
@@ -177,11 +190,13 @@ pub fn ExampleScene(comptime Theme: type) type {
             switch (self.action_state.current) {
                 .info_popup => {
                     if (self.fui.info_popup(renderer, "Information popup example", mouse, Theme.POPUP_COLOR) != null) {
+                        self.sfx.play(SfxEffect.menu_main);
                         self.action_state.go_to(Action.none);
                     }
                 },
                 .yes_no_popup => {
                     if (self.fui.yes_no_popup(renderer, "Do you like this popup?", mouse)) |answer| {
+                        self.sfx.play(SfxEffect.menu_main);
                         self.last_yes_no = answer;
                         self.action_state.go_to(Action.none);
                     }
