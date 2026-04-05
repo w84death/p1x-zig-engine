@@ -24,7 +24,7 @@ pub fn MenuScene(comptime Menu: type, comptime Theme: type) type {
 
         pub fn draw(self: *Self, renderer: *Render, mouse: Mouse) void {
             const cx: i32 = self.fui.pivotX(.center);
-            const menu_h = self.calc_menu_height();
+            const menu_h = self.menu.height();
             const menu_y = self.fui.pivotY(.center) - @divFloor(menu_h, 2);
             const cy: i32 = menu_y - 128;
             const tx: i32 = cx - self.fui.text_center(CONF.THE_NAME, Theme.FONT_BIG)[0];
@@ -33,10 +33,6 @@ pub fn MenuScene(comptime Menu: type, comptime Theme: type) type {
             self.fui.draw_text(renderer, CONF.TAG_LINE, cx - self.fui.text_center(CONF.TAG_LINE, Theme.FONT_DEFAULT)[0], cy + 64, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
 
             self.menu.draw_at(renderer, self.sm, mouse, cx, menu_y);
-        }
-
-        fn calc_menu_height(self: *Self) i32 {
-            return self.menu.height();
         }
     };
 }
