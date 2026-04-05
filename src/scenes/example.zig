@@ -94,6 +94,7 @@ pub fn ExampleScene(comptime Theme: type) type {
             self.effects.update(dt);
             if (self.explosions_enabled and mouse.just_pressed) {
                 self.effects.spawn_explosion(mouse.x, mouse.y);
+                self.benchmark.splat_terrain_hole(mouse.x, mouse.y, renderer);
             }
         }
 

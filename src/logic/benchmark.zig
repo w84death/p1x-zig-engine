@@ -12,6 +12,7 @@ const EXAMPLE_BG_COLOR = 0x4b692f;
 const TERRAIN_WEAR_DARKEN = 8;
 const ANIMATED_DEF_INDEX: usize = 0;
 const TERRAIN_DEF_INDEX: usize = 1;
+const TERRAIN_HOLE_DEF_INDEX: usize = 2;
 
 pub const BenchmarkLogic = struct {
     const Self = @This();
@@ -31,6 +32,7 @@ pub const BenchmarkLogic = struct {
         sprite_data: []const u8,
         sprite_sheet: ?*SpriteSheet,
         sprite_size: i32,
+        sprite_anim_start: usize,
         sprite_anim_len: usize,
         sprite_anim_dur: f32,
         speed_min: f32,
@@ -39,7 +41,7 @@ pub const BenchmarkLogic = struct {
 
     allocator: std.mem.Allocator,
     sprites: std.ArrayListUnmanaged(SpriteInstance),
-    sprite_defs: [2]SpriteDefinition,
+    sprite_defs: [3]SpriteDefinition,
     prng: std.Random.DefaultPrng,
     sprite_trails_enabled: bool,
     cursor_follow_enabled: bool,
@@ -67,6 +69,7 @@ pub const BenchmarkLogic = struct {
                 .sprite_data = @embedFile("../sprites/borowik.bmp"),
                 .sprite_sheet = null,
                 .sprite_size = 32,
+                .sprite_anim_start = 0,
                 .sprite_anim_len = 3,
                 .sprite_anim_dur = 0.12,
                 .speed_min = 18.0,
@@ -77,7 +80,19 @@ pub const BenchmarkLogic = struct {
                 .sprite_data = @embedFile("../sprites/terrain.bmp"),
                 .sprite_sheet = null,
                 .sprite_size = 32,
+                .sprite_anim_start = 0,
                 .sprite_anim_len = 8,
+                .sprite_anim_dur = 0,
+                .speed_min = 0,
+                .speed_max = 0,
+            },
+            .{
+                .asset_name = "terrain.bmp",
+                .sprite_data = @embedFile("../sprites/terrain.bmp"),
+                .sprite_sheet = null,
+                .sprite_size = 32,
+                .sprite_anim_start = 8,
+                .sprite_anim_len = 6,
                 .sprite_anim_dur = 0,
                 .speed_min = 0,
                 .speed_max = 0,
@@ -198,6 +213,22 @@ pub const BenchmarkLogic = struct {
         return self.sprites.items.len;
     }
 
+    pub fn splat_terrain_hole(self: *Self, x: i32, y: i32, renderer: *Render) void {
+        const def = &self.sprite_defs[TERRAIN_HOLE_DEF_INDEX];
+        const sheet = def.sprite_sheet orelse return;
+        if (def.sprite_anim_len == 0) return;
+
+        const rand = self.prng.random();
+        const frame_offset = rand.intRangeAtMost(usize, 0, def.sprite_anim_len - 1);
+        const frame = def.sprite_anim_start + frame_offset;
+        const draw_x = x - @divFloor(def.sprite_size, 2);
+        const draw_y = y - @divFloor(def.sprite_size, 2);
+
+        renderer.set_target(.terrain);
+        defer renderer.set_target(.frame);
+        sheet.draw_frame(renderer, frame, draw_x, draw_y);
+    }
+
     pub fn toggle_sprite_trails(self: *Self) void {
         self.sprite_trails_enabled = !self.sprite_trails_enabled;
     }
@@ -228,7 +259,7 @@ pub const BenchmarkLogic = struct {
 
         const rand = self.prng.random();
         var sprite = Sprite.init(sheet, def.sprite_anim_dur);
-        try sprite.set_animation(0, def.sprite_anim_len, def.sprite_anim_dur, true);
+        try sprite.set_animation(def.sprite_anim_start, def.sprite_anim_len, def.sprite_anim_dur, true);
         sprite.current_offset = rand.intRangeAtMost(usize, 0, def.sprite_anim_len - 1);
 
         const max_x = @max(0, self.screen_width - def.sprite_size);
@@ -257,7 +288,7 @@ pub const BenchmarkLogic = struct {
         renderer.set_target(.terrain);
         defer renderer.set_target(.frame);
         var stamp = Sprite.init(terrain_sheet, 0.0);
-        stamp.set_animation(0, terrain_def.sprite_anim_len, 0.0, true) catch return;
+        stamp.set_animation(terrain_def.sprite_anim_start, terrain_def.sprite_anim_len, 0.0, true) catch return;
 
         const rand = self.prng.random();
         const max_x = @max(0, self.screen_width - terrain_def.sprite_size);

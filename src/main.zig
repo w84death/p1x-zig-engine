@@ -14,6 +14,8 @@ const IO = @import("engine/io.zig");
 const Render = @import("engine/render.zig").Render;
 const Audio = @import("engine/audio.zig").Audio;
 const ProcAudio = @import("engine/proc_audio.zig").ProcAudio;
+const Sprite = @import("engine/sprites.zig").Sprite;
+const SpriteSheet = @import("engine/sprites.zig").SpriteSheet;
 const THEME = @import("themes/mil.zig").Theme;
 //const THEME = @import("themes/smol.zig").Theme;
 //const THEME = @import("themes/shroom.zig").Theme;
@@ -65,6 +67,28 @@ pub fn main() void {
     defer audio.deinit();
     var proc_audio = ProcAudio.init(std.heap.c_allocator);
     defer proc_audio.deinit();
+    var logo_sheet: ?*SpriteSheet = null;
+    var logo_sprite: ?Sprite = null;
+
+    if (SpriteSheet.load_bmp_bytes(allocator, @embedFile("sprites/logo.bmp"), 96, 22)) |sheet| {
+        const sheet_ptr = allocator.create(SpriteSheet) catch null;
+        if (sheet_ptr) |ptr| {
+            ptr.* = sheet;
+            logo_sheet = ptr;
+
+            var sprite = Sprite.init(ptr, 0.14);
+            const frame_count = @min(@as(usize, 3), ptr.frame_count());
+            if (frame_count > 0) {
+                sprite.set_animation(0, frame_count, 0.14, true) catch {};
+                logo_sprite = sprite;
+            }
+        }
+    } else |_| {}
+    defer if (logo_sheet) |sheet| {
+        sheet.deinit();
+        allocator.destroy(sheet);
+    };
+
     var fui = Fui.init(settings.width, settings.height);
     var sm = StateMachine.init(State.main_menu);
     var esc_lock = false;
@@ -112,8 +136,10 @@ pub fn main() void {
             State.example => {
                 example.update(mouse, renderer.dt, &renderer);
             },
+            State.main_menu => {},
             else => {},
         }
+        if (logo_sprite) |*s| s.update(renderer.dt);
 
         // State draw
         switch (sm.current) {
@@ -139,6 +165,11 @@ pub fn main() void {
         }
 
         // Bottom global info
+        if (logo_sprite) |*s| {
+            const logo_x = fui.pivotX(.bottom_right) - 96;
+            const logo_y = fui.pivotY(.bottom_right) - 32;
+            s.draw(&renderer, logo_x, logo_y);
+        }
         fui.draw_version(&renderer);
         renderer.draw_perf_overlay(&fui, THEME);
 
