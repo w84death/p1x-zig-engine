@@ -69,6 +69,10 @@ static LRESULT CALLBACK fenster_wndproc(HWND hwnd, UINT msg, WPARAM wParam,
 
 int fenster_open(struct fenster *f) {
   HINSTANCE hInstance = GetModuleHandle(NULL);
+  DWORD ex_style = WS_EX_CLIENTEDGE;
+  DWORD style =
+      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+  RECT rect = {0, 0, f->width, f->height};
   WNDCLASSEX wc = {0};
   wc.cbSize = sizeof(WNDCLASSEX);
   wc.style = CS_VREDRAW | CS_HREDRAW;
@@ -76,10 +80,11 @@ int fenster_open(struct fenster *f) {
   wc.hInstance = hInstance;
   wc.lpszClassName = f->title;
   RegisterClassEx(&wc);
+
+  AdjustWindowRectEx(&rect, style, FALSE, ex_style);
   f->hwnd = CreateWindowEx(
-      WS_EX_CLIENTEDGE, f->title, f->title,
-      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
-      CW_USEDEFAULT, CW_USEDEFAULT, f->width, f->height, NULL, NULL, hInstance,
+      ex_style, f->title, f->title, style, CW_USEDEFAULT, CW_USEDEFAULT,
+      rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, hInstance,
       NULL);
 
   if (f->hwnd == NULL)
