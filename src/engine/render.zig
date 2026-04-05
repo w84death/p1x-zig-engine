@@ -40,7 +40,9 @@ pub const Render = struct {
         h: i32,
     };
 
-    window_buf: *[PIXELS_COUNT]u32,
+    window_buf: []u32,
+    window_width: usize,
+    window_height: usize,
     frame_buf: []u32,
     terrain_buf: []u32,
     allocator: std.mem.Allocator,
@@ -49,16 +51,20 @@ pub const Render = struct {
     now: i64,
     perf: PerfStats = .{},
 
-    pub fn init(buf: *[PIXELS_COUNT]u32) Render {
+    pub fn init(buf: []u32, window_width: i32, window_height: i32) Render {
         const allocator = std.heap.c_allocator;
         const frame_buf = allocator.alloc(u32, PIXELS_COUNT) catch @panic("failed to allocate frame buffer");
         const terrain_buf = allocator.alloc(u32, PIXELS_COUNT) catch @panic("failed to allocate terrain buffer");
+        const win_w: usize = if (window_width > 0) @intCast(window_width) else CONF.SCREEN_W;
+        const win_h: usize = if (window_height > 0) @intCast(window_height) else CONF.SCREEN_H;
 
         @memset(frame_buf, 0);
         @memset(terrain_buf, 0);
 
         return .{
             .window_buf = buf,
+            .window_width = win_w,
+            .window_height = win_h,
             .frame_buf = frame_buf,
             .terrain_buf = terrain_buf,
             .allocator = allocator,
@@ -88,7 +94,27 @@ pub const Render = struct {
     }
 
     pub fn present(self: *Render) void {
-        @memcpy(self.window_buf[0..], self.frame_buf);
+        const dst_w = self.window_width;
+        const dst_h = self.window_height;
+        const src_w: usize = CONF.SCREEN_W;
+        const src_h: usize = CONF.SCREEN_H;
+
+        if (src_w == dst_w and src_h == dst_h) {
+            @memcpy(self.window_buf, self.frame_buf);
+            return;
+        }
+
+        var y: usize = 0;
+        while (y < dst_h) : (y += 1) {
+            const src_y = (y * src_h) / dst_h;
+            const src_row_start = src_y * src_w;
+            const dst_row_start = y * dst_w;
+            var x: usize = 0;
+            while (x < dst_w) : (x += 1) {
+                const src_x = (x * src_w) / dst_w;
+                self.window_buf[dst_row_start + x] = self.frame_buf[src_row_start + src_x];
+            }
+        }
     }
 
     pub fn perf_begin_sim(self: *Render) void {

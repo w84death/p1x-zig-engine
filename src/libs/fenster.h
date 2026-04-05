@@ -25,6 +25,7 @@ struct fenster {
   int x;
   int y;
   int mouse;
+  int fullscreen;
 #if defined(_WIN32)
   HWND hwnd;
 #else

@@ -10,11 +10,12 @@ const c = @cImport({
     @cInclude("fenster_audio.h");
 });
 const CONF = @import("engine/config.zig").CONF;
+const IO = @import("engine/io.zig");
 const Render = @import("engine/render.zig").Render;
-const THEME = @import("themes/mil.zig").Theme;
+//const THEME = @import("themes/mil.zig").Theme;
 //const THEME = @import("themes/smol.zig").Theme;
 //const THEME = @import("themes/shroom.zig").Theme;
-//const THEME = @import("themes/gray.zig").Theme;
+const THEME = @import("themes/gray.zig").Theme;
 const Fui = @import("engine/fui.zig").Fui(THEME);
 const MouseButtons = @import("engine/mouse.zig").MouseButtons;
 const State = enum {
@@ -32,17 +33,37 @@ const AboutScene = @import("scenes/about.zig").AboutScene(THEME);
 const ExampleScene = @import("scenes/example.zig").ExampleScene(THEME);
 
 pub fn main() void {
-    var buf: [CONF.SCREEN_W * CONF.SCREEN_H]u32 = undefined;
-    var f = std.mem.zeroInit(c.fenster, .{
+    const settings = IO.load_or_create_settings() catch IO.Settings{
         .width = CONF.SCREEN_W,
         .height = CONF.SCREEN_H,
+        .fullscreen = false,
+    };
+
+    const render_pixels = CONF.SCREEN_W * CONF.SCREEN_H;
+    const window_pixels_i64: i64 = @as(i64, settings.width) * @as(i64, settings.height);
+    const window_pixels: usize = if (window_pixels_i64 > 0)
+        @intCast(window_pixels_i64)
+    else
+        render_pixels;
+    const total_pixels: usize = @max(render_pixels, window_pixels);
+
+    const allocator = std.heap.c_allocator;
+    const raw_buf = allocator.alloc(u32, total_pixels) catch @panic("failed to allocate window buffer");
+    defer allocator.free(raw_buf);
+    @memset(raw_buf, 0);
+    const fullscreen_flag: i32 = if (settings.fullscreen) 1 else 0;
+
+    var f = std.mem.zeroInit(c.fenster, .{
+        .width = settings.width,
+        .height = settings.height,
         .title = CONF.THE_NAME,
-        .buf = &buf[0],
+        .buf = raw_buf.ptr,
+        .fullscreen = fullscreen_flag,
     });
     _ = c.fenster_open(&f);
     defer c.fenster_close(&f);
     var mouse_buttons = MouseButtons.init();
-    var renderer = Render.init(&buf);
+    var renderer = Render.init(raw_buf, settings.width, settings.height);
     defer renderer.deinit();
     var fui = Fui.init();
     var sm = StateMachine.init(State.main_menu);
@@ -76,7 +97,11 @@ pub fn main() void {
         renderer.begin_frame();
         if (!sm.is(.example)) renderer.clear_background(THEME.BG_COLOR);
 
-        const mouse = mouse_buttons.update(f.x, f.y, @intCast(f.mouse));
+        const mapped_mouse_x = @divFloor(f.x * CONF.SCREEN_W, settings.width);
+        const mapped_mouse_y = @divFloor(f.y * CONF.SCREEN_H, settings.height);
+        const mouse_x = std.math.clamp(mapped_mouse_x, 0, CONF.SCREEN_W - 1);
+        const mouse_y = std.math.clamp(mapped_mouse_y, 0, CONF.SCREEN_H - 1);
+        const mouse = mouse_buttons.update(mouse_x, mouse_y, @intCast(f.mouse));
 
         // ESC handler
         if (esc_lock and f.keys[27] == 0) {
@@ -86,7 +111,15 @@ pub fn main() void {
             if (!sm.is(State.main_menu)) sm.go_to(State.main_menu) else break;
         }
 
-        // State switcher
+        // State update
+        switch (sm.current) {
+            State.example => {
+                example.update(mouse, renderer.dt, &renderer);
+            },
+            else => {},
+        }
+
+        // State draw
         switch (sm.current) {
             State.main_menu => {
                 menu.draw(&renderer, mouse);
@@ -113,7 +146,7 @@ pub fn main() void {
         fui.draw_version(&renderer);
         renderer.draw_perf_overlay(&fui, THEME);
 
-        fui.draw_cursor_lines(&renderer, .{ f.x, f.y });
+        fui.draw_cursor_lines(&renderer, .{ mouse_x, mouse_y });
 
         renderer.perf_begin_present();
         renderer.present();

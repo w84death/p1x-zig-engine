@@ -68,9 +68,11 @@ static LRESULT CALLBACK fenster_wndproc(HWND hwnd, UINT msg, WPARAM wParam,
 
 int fenster_open(struct fenster *f) {
   HINSTANCE hInstance = GetModuleHandle(NULL);
-  DWORD ex_style = WS_EX_CLIENTEDGE;
-  DWORD style =
-      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+  DWORD ex_style = f->fullscreen ? WS_EX_APPWINDOW : WS_EX_CLIENTEDGE;
+  DWORD style = f->fullscreen
+                    ? WS_POPUP
+                    : (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX |
+                       WS_MAXIMIZEBOX);
   RECT rect = {0, 0, f->width, f->height};
   int window_width, window_height;
   int x, y;
@@ -82,15 +84,22 @@ int fenster_open(struct fenster *f) {
   wc.lpszClassName = f->title;
   RegisterClassEx(&wc);
 
-  AdjustWindowRectEx(&rect, style, FALSE, ex_style);
-  window_width = rect.right - rect.left;
-  window_height = rect.bottom - rect.top;
-  x = (GetSystemMetrics(SM_CXSCREEN) - window_width) / 2;
-  y = (GetSystemMetrics(SM_CYSCREEN) - window_height) / 2;
-  if (x < 0)
+  if (f->fullscreen) {
+    window_width = f->width;
+    window_height = f->height;
     x = 0;
-  if (y < 0)
     y = 0;
+  } else {
+    AdjustWindowRectEx(&rect, style, FALSE, ex_style);
+    window_width = rect.right - rect.left;
+    window_height = rect.bottom - rect.top;
+    x = (GetSystemMetrics(SM_CXSCREEN) - window_width) / 2;
+    y = (GetSystemMetrics(SM_CYSCREEN) - window_height) / 2;
+    if (x < 0)
+      x = 0;
+    if (y < 0)
+      y = 0;
+  }
 
   f->hwnd = CreateWindowEx(
       ex_style, f->title, f->title, style, x, y, window_width, window_height,
