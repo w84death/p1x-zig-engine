@@ -47,4 +47,6 @@ pub const Theme = struct {
     pub const FONT_DEFAULT = 1;
     pub const FONT_MEDIUM = 2;
     pub const FONT_BIG = 4;
+    pub const FONT_PERF = 1;
+    pub const FONT_PERFLINE_HEIGHT = 10;
 };

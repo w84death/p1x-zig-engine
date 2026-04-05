@@ -1,6 +1,6 @@
 # Borowik Engine
 
-![Main window](screenshot.png)
+![Main window](main-menu.png)
 
 Simple Zig engine project using the [fenster](https://github.com/zserge/fenster) software renderer.
 
@@ -10,9 +10,13 @@ See full usage and architecture docs in [MANUAL.md](MANUAL.md).
 
 ## Example Scene
 
-10000 sprites test. Each sprite follows cursor and leaves trail on the terrain.
+To test all the engine fetures and benchmark performance.
 
-![10K benchmark](10k.png)
+![Example Scene](example.png)
+
+Sprites making trails on terrain and follow cursor.
+
+![Shrooms Follow](follow.png)
 
 ## Engine Features
 
