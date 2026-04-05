@@ -1,5 +1,5 @@
 # Borowik Engine
-![Borowik](documents/logo_4x.gif)
+![Borowik](documents/logo.gif)
 
 Simple Zig engine project using the [fenster](https://github.com/zserge/fenster) software renderer.
 
