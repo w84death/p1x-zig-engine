@@ -2,6 +2,8 @@ const std = @import("std");
 const Audio = @import("../engine/audio.zig").Audio;
 const ProcAudio = @import("../engine/proc_audio.zig").ProcAudio;
 const ProcAudioProfile = @import("../engine/proc_audio.zig").Profile;
+const Sprite = @import("../engine/sprites.zig").Sprite;
+const SpriteSheet = @import("../engine/sprites.zig").SpriteSheet;
 const Sfx = @import("../logic/sfx.zig").Sfx;
 const SfxEffect = @import("../logic/sfx.zig").Effect;
 const Mouse = @import("../engine/mouse.zig").Mouse;
@@ -59,9 +61,12 @@ pub fn ExampleScene(comptime Theme: type) type {
         };
 
         fui: *Fui,
+        allocator: std.mem.Allocator,
         vfx: Vfx,
         benchmark: Benchmark,
         effects: Effects,
+        cursor_sheet: ?*SpriteSheet,
+        cursor_sprite: ?Sprite,
         audio: *Audio,
         proc_audio: *ProcAudio,
         sfx: *Sfx,
@@ -73,11 +78,32 @@ pub fn ExampleScene(comptime Theme: type) type {
         last_yes_no: ?bool = null,
 
         pub fn init(allocator: std.mem.Allocator, fui: *Fui, renderer: *Render, audio: *Audio, proc_audio: *ProcAudio, sfx: *Sfx) Self {
+            var cursor_sheet: ?*SpriteSheet = null;
+            var cursor_sprite: ?Sprite = null;
+
+            if (SpriteSheet.load_bmp_bytes(allocator, @embedFile("../sprites/hand.bmp"), 36, 56)) |sheet| {
+                const sheet_ptr = allocator.create(SpriteSheet) catch null;
+                if (sheet_ptr) |ptr| {
+                    ptr.* = sheet;
+                    cursor_sheet = ptr;
+
+                    var sprite = Sprite.init(ptr, 0.06);
+                    const frame_count = @min(@as(usize, 6), ptr.frame_count());
+                    if (frame_count > 0) {
+                        sprite.set_animation(0, frame_count, 0.133, true) catch {};
+                        cursor_sprite = sprite;
+                    }
+                }
+            } else |_| {}
+
             return .{
                 .fui = fui,
+                .allocator = allocator,
                 .vfx = Vfx.init(renderer.width, renderer.height),
                 .benchmark = Benchmark.init(allocator, renderer),
                 .effects = Effects.init(allocator, sfx, EFFECTS_MAX_PARTICLES),
+                .cursor_sheet = cursor_sheet,
+                .cursor_sprite = cursor_sprite,
                 .audio = audio,
                 .proc_audio = proc_audio,
                 .sfx = sfx,
@@ -93,11 +119,18 @@ pub fn ExampleScene(comptime Theme: type) type {
         pub fn deinit(self: *Self) void {
             self.effects.deinit();
             self.benchmark.deinit();
+            if (self.cursor_sheet) |sheet| {
+                sheet.deinit();
+                self.allocator.destroy(sheet);
+            }
         }
 
         pub fn update(self: *Self, mouse: Mouse, dt: f32, renderer: *Render) void {
             self.benchmark.update_simulation(mouse, dt, renderer);
             self.effects.update(dt);
+            if (self.cursor_sprite) |*cursor| {
+                cursor.update(dt);
+            }
             if (self.explosions_enabled and mouse.just_pressed) {
                 self.effects.spawn_explosion(mouse.x, mouse.y);
                 self.benchmark.splat_terrain_hole(mouse.x, mouse.y, renderer);
@@ -118,6 +151,15 @@ pub fn ExampleScene(comptime Theme: type) type {
             }
             self.apply_menu_actions();
             self.render_ui(renderer);
+            self.draw_cursor(mouse, renderer);
+        }
+
+        fn draw_cursor(self: *Self, mouse: Mouse, renderer: *Render) void {
+            if (self.cursor_sprite) |*cursor| {
+                const draw_x = mouse.x - 5;
+                const draw_y = mouse.y - 5;
+                cursor.draw(renderer, draw_x, draw_y);
+            }
         }
 
         fn handle_top_controls(self: *Self, mouse: Mouse, renderer: *Render) void {

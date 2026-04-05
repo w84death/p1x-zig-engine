@@ -1,22 +1,11 @@
 # Borowik Engine
-
-![Main window](main-menu.png)
+![Borowik](documents/logo_4x.gif)
 
 Simple Zig engine project using the [fenster](https://github.com/zserge/fenster) software renderer.
 
 The name comes from **borowik** ([boletus mushroom](https://en.wikipedia.org/wiki/Boletus)).
 
 See full usage and architecture docs in [MANUAL.md](MANUAL.md).
-
-## Example Scene
-
-To test all the engine features and benchmark performance.
-
-![Example Scene](example.png)
-
-Sprites making trails on terrain and follow cursor.
-
-![Shrooms Follow](follow.png)
 
 ## Engine Features
 
@@ -50,6 +39,19 @@ Sprites making trails on terrain and follow cursor.
   - interactive popup/menu actions
 - built-in performance overlay:
   - FPS, simulation time, draw time, and present time
+
+
+## Example Project
+
+![Main window](documents/screenshot-1.png)
+
+To test all the engine features and benchmark performance.
+
+![Example Scene](documents/screenshot-2.png)
+
+Sprites making trails on terrain and follow cursor.
+
+![Shrooms Follow](documents/screenshot-3.png)
 
 ## Run
 

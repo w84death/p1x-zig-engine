@@ -140,6 +140,9 @@ pub fn main() void {
             if (!sm.is(State.main_menu)) sm.go_to(State.main_menu) else break;
         }
 
+        // Update audio
+        audio.update_audio(renderer.dt);
+
         // State update
         switch (sm.current) {
             State.example => {
@@ -183,13 +186,13 @@ pub fn main() void {
         fui.draw_version(&renderer);
         renderer.draw_perf_overlay(&fui, THEME);
 
-        fui.draw_cursor_lines(&renderer, .{ f.x, f.y });
+        if (!sm.is(State.example)) {
+            fui.draw_cursor_lines(&renderer, .{ f.x, f.y });
+        }
 
         renderer.perf_begin_present();
         renderer.present();
         renderer.perf_end_present();
-
-        audio.update_audio(renderer.dt);
 
         renderer.cap_frame(CONF.TARGET_FPS);
     }
