@@ -24,6 +24,7 @@ pub fn ExampleScene(comptime Theme: type) type {
         toggle_vfx,
         toggle_sprite_trails,
         toggle_cursor_follow,
+        toggle_simulation,
         spawn_sprite,
         spawn_100_sprites,
         spawn_10k_sprites,
@@ -67,6 +68,7 @@ pub fn ExampleScene(comptime Theme: type) type {
                     .{ .text = "Toggle VFX", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.toggle_vfx },
                     .{ .text = "Toggle Sprite Trails", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.toggle_sprite_trails },
                     .{ .text = "Toggle Cursor Follow", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.toggle_cursor_follow },
+                    .{ .text = "Toggle Simulation", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.toggle_simulation },
                     .{ .text = "Spawn 1 Sprite", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.spawn_sprite },
                     .{ .text = "Spawn 100 sprites", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.spawn_100_sprites },
                     .{ .text = "Spawn 10K sprites", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.spawn_10k_sprites },
@@ -85,6 +87,7 @@ pub fn ExampleScene(comptime Theme: type) type {
         vfx_enabled: bool,
         sprite_trails_enabled: bool,
         cursor_follow_enabled: bool,
+        simulation_enabled: bool,
         terrain_ready: bool,
         last_yes_no: ?bool = null,
 
@@ -125,6 +128,7 @@ pub fn ExampleScene(comptime Theme: type) type {
             self.vfx_enabled = false;
             self.sprite_trails_enabled = false;
             self.cursor_follow_enabled = false;
+            self.simulation_enabled = true;
             self.last_yes_no = null;
             self.terrain_ready = false;
 
@@ -164,53 +168,56 @@ pub fn ExampleScene(comptime Theme: type) type {
             renderer.copy_buffer(.terrain, .frame);
             renderer.set_target(.frame);
 
-            if (self.vfx_enabled) {
+            if (self.vfx_enabled and self.simulation_enabled) {
                 self.vfx.draw(renderer, Theme.SECONDARY_COLOR, dt);
             }
 
             const rand = self.prng.random();
             for (self.sprites.items) |*instance| {
-                instance.dir_timer -= dt;
-                if (instance.dir_timer <= 0.0) {
-                    instance.dir_timer = random_range_f32(&rand, SPRITE_DIR_HOLD_MIN, SPRITE_DIR_HOLD_MAX);
+                if (self.simulation_enabled) {
+                    instance.dir_timer -= dt;
+                    if (instance.dir_timer <= 0.0) {
+                        instance.dir_timer = random_range_f32(&rand, SPRITE_DIR_HOLD_MIN, SPRITE_DIR_HOLD_MAX);
 
-                    if (self.cursor_follow_enabled and rand.intRangeAtMost(u32, 0, 99) < SPRITE_CURSOR_TURN_CHANCE) {
-                        const center_x = instance.x + @as(f32, @floatFromInt(@divFloor(instance.size, 2)));
-                        const center_y = instance.y + @as(f32, @floatFromInt(@divFloor(instance.size, 2)));
-                        const to_mouse_x = @as(f32, @floatFromInt(mouse.x)) - center_x;
-                        const to_mouse_y = @as(f32, @floatFromInt(mouse.y)) - center_y;
-                        if (to_mouse_x != 0.0 or to_mouse_y != 0.0) {
-                            instance.heading = std.math.atan2(to_mouse_y, to_mouse_x);
+                        if (self.cursor_follow_enabled and rand.intRangeAtMost(u32, 0, 99) < SPRITE_CURSOR_TURN_CHANCE) {
+                            const center_x = instance.x + @as(f32, @floatFromInt(@divFloor(instance.size, 2)));
+                            const center_y = instance.y + @as(f32, @floatFromInt(@divFloor(instance.size, 2)));
+                            const to_mouse_x = @as(f32, @floatFromInt(mouse.x)) - center_x;
+                            const to_mouse_y = @as(f32, @floatFromInt(mouse.y)) - center_y;
+                            if (to_mouse_x != 0.0 or to_mouse_y != 0.0) {
+                                instance.heading = std.math.atan2(to_mouse_y, to_mouse_x);
+                            }
+                        } else {
+                            instance.heading = random_range_f32(&rand, 0.0, @as(f32, std.math.pi * 2.0));
                         }
-                    } else {
-                        instance.heading = random_range_f32(&rand, 0.0, @as(f32, std.math.pi * 2.0));
                     }
+
+                    instance.x += std.math.cos(instance.heading) * instance.speed * dt;
+                    instance.y += std.math.sin(instance.heading) * instance.speed * dt;
+
+                    const max_x_f: f32 = @floatFromInt(@max(0, CONF.SCREEN_W - instance.size));
+                    const max_y_f: f32 = @floatFromInt(@max(0, CONF.SCREEN_H - instance.size));
+                    if (instance.x < 0.0) {
+                        instance.x = 0.0;
+                        instance.heading = std.math.pi - instance.heading;
+                    } else if (instance.x > max_x_f) {
+                        instance.x = max_x_f;
+                        instance.heading = std.math.pi - instance.heading;
+                    }
+                    if (instance.y < 0.0) {
+                        instance.y = 0.0;
+                        instance.heading = -instance.heading;
+                    } else if (instance.y > max_y_f) {
+                        instance.y = max_y_f;
+                        instance.heading = -instance.heading;
+                    }
+
+                    instance.sprite.update(dt);
                 }
 
-                instance.x += std.math.cos(instance.heading) * instance.speed * dt;
-                instance.y += std.math.sin(instance.heading) * instance.speed * dt;
-
-                const max_x_f: f32 = @floatFromInt(@max(0, CONF.SCREEN_W - instance.size));
-                const max_y_f: f32 = @floatFromInt(@max(0, CONF.SCREEN_H - instance.size));
-                if (instance.x < 0.0) {
-                    instance.x = 0.0;
-                    instance.heading = std.math.pi - instance.heading;
-                } else if (instance.x > max_x_f) {
-                    instance.x = max_x_f;
-                    instance.heading = std.math.pi - instance.heading;
-                }
-                if (instance.y < 0.0) {
-                    instance.y = 0.0;
-                    instance.heading = -instance.heading;
-                } else if (instance.y > max_y_f) {
-                    instance.y = max_y_f;
-                    instance.heading = -instance.heading;
-                }
-
-                instance.sprite.update(dt);
                 const draw_x: i32 = @intFromFloat(instance.x);
                 const draw_y: i32 = @intFromFloat(instance.y);
-                if (self.sprite_trails_enabled) {
+                if (self.simulation_enabled and self.sprite_trails_enabled) {
                     renderer.darken_buffer_pixel(.terrain, draw_x + @divFloor(instance.size, 2), draw_y + @divFloor(instance.size, 2), TERRAIN_WEAR_DARKEN);
                 }
                 instance.sprite.draw(renderer, draw_x, draw_y);
@@ -245,6 +252,10 @@ pub fn ExampleScene(comptime Theme: type) type {
                     self.cursor_follow_enabled = !self.cursor_follow_enabled;
                     self.action_state.go_to(Action.none);
                 },
+                .toggle_simulation => {
+                    self.simulation_enabled = !self.simulation_enabled;
+                    self.action_state.go_to(Action.none);
+                },
                 .spawn_sprite => {
                     self.spawn_random_sprite() catch |err| {
                         std.log.err("failed to spawn sprite: {s}", .{@errorName(err)});
@@ -277,13 +288,14 @@ pub fn ExampleScene(comptime Theme: type) type {
             }
 
             const mx = self.fui.pivotX(.center) - 100;
+            const my = self.fui.pivotY(.bottom_left);
             const status: [:0]const u8 = if (self.last_yes_no == null)
                 "Last choice: -"
             else if (self.last_yes_no.?)
                 "Last choice: Yes"
             else
                 "Last choice: No";
-            self.fui.draw_text(renderer, status, mx, ty + 320, Theme.FONT_DEFAULT, Theme.SECONDARY_COLOR);
+            self.fui.draw_text(renderer, status, mx, my, Theme.FONT_DEFAULT, Theme.SECONDARY_COLOR);
 
             var count_buf: [32]u8 = undefined;
             const count_text = std.fmt.bufPrint(&count_buf, "Sprites: {d}", .{self.sprites.items.len}) catch "Sprites: ?";
@@ -297,6 +309,9 @@ pub fn ExampleScene(comptime Theme: type) type {
 
             const follow_text: [:0]const u8 = if (self.cursor_follow_enabled) "Follow: ON" else "Follow: OFF";
             self.fui.draw_text(renderer, follow_text, self.fui.pivotX(.top_right) - 224, self.fui.pivotY(.top_right) + 72, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
+
+            const simulation_text: [:0]const u8 = if (self.simulation_enabled) "Simulation: ON" else "Simulation: OFF";
+            self.fui.draw_text(renderer, simulation_text, self.fui.pivotX(.top_right) - 224, self.fui.pivotY(.top_right) + 96, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
         }
 
         fn spawn_random_sprite(self: *Self) !void {
