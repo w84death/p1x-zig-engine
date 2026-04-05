@@ -4,6 +4,7 @@
 // github.com/w84death/borowik-engine
 // *************************************
 
+const std = @import("std");
 const c = @cImport({
     @cInclude("fenster.h");
 });
@@ -25,20 +26,34 @@ pub const Render = struct {
     };
 
     window_buf: *[PIXELS_COUNT]u32,
-    frame_buf: [PIXELS_COUNT]u32,
-    terrain_buf: [PIXELS_COUNT]u32,
+    frame_buf: []u32,
+    terrain_buf: []u32,
+    allocator: std.mem.Allocator,
     target: Framebuffer = .frame,
     dt: f32 = 0.0,
     now: i64,
 
     pub fn init(buf: *[PIXELS_COUNT]u32) Render {
+        const allocator = std.heap.c_allocator;
+        const frame_buf = allocator.alloc(u32, PIXELS_COUNT) catch @panic("failed to allocate frame buffer");
+        const terrain_buf = allocator.alloc(u32, PIXELS_COUNT) catch @panic("failed to allocate terrain buffer");
+
+        @memset(frame_buf, 0);
+        @memset(terrain_buf, 0);
+
         return .{
             .window_buf = buf,
-            .frame_buf = [_]u32{0} ** PIXELS_COUNT,
-            .terrain_buf = [_]u32{0} ** PIXELS_COUNT,
+            .frame_buf = frame_buf,
+            .terrain_buf = terrain_buf,
+            .allocator = allocator,
             .target = .frame,
             .now = c.fenster_time(),
         };
+    }
+
+    pub fn deinit(self: *Render) void {
+        self.allocator.free(self.frame_buf);
+        self.allocator.free(self.terrain_buf);
     }
 
     pub fn begin_frame(self: *Render) void {
@@ -57,7 +72,7 @@ pub const Render = struct {
     }
 
     pub fn present(self: *Render) void {
-        @memcpy(self.window_buf[0..], self.frame_buf[0..]);
+        @memcpy(self.window_buf[0..], self.frame_buf);
     }
 
     pub fn set_target(self: *Render, target: Framebuffer) void {
@@ -66,15 +81,15 @@ pub const Render = struct {
 
     pub fn clear_buffer(self: *Render, target: Framebuffer, color: u32) void {
         const buf = self.buffer_ptr(target);
-        for (buf, 0..) |_, i| {
-            buf[i] = color;
+        for (buf) |*px| {
+            px.* = color;
         }
     }
 
     pub fn copy_buffer(self: *Render, src: Framebuffer, dst: Framebuffer) void {
         const src_buf = self.buffer_ptr(src);
         const dst_buf = self.buffer_ptr(dst);
-        @memcpy(dst_buf[0..], src_buf[0..]);
+        @memcpy(dst_buf, src_buf);
     }
 
     pub fn darken_buffer_pixel(self: *Render, target: Framebuffer, x: i32, y: i32, amount: u8) void {
@@ -96,7 +111,7 @@ pub const Render = struct {
     }
 
     pub fn target_buffer(self: *Render) []u32 {
-        return self.active_buffer_ptr()[0..];
+        return self.active_buffer_ptr();
     }
 
     pub fn put_pixel(self: *Render, x: i32, y: i32, color: u32) void {
@@ -251,14 +266,14 @@ pub const Render = struct {
         return ClippedRect{ .x = rx, .y = ry, .w = rw, .h = rh };
     }
 
-    fn active_buffer_ptr(self: *Render) *[PIXELS_COUNT]u32 {
+    fn active_buffer_ptr(self: *Render) []u32 {
         return self.buffer_ptr(self.target);
     }
 
-    fn buffer_ptr(self: *Render, target: Framebuffer) *[PIXELS_COUNT]u32 {
+    fn buffer_ptr(self: *Render, target: Framebuffer) []u32 {
         return switch (target) {
-            .frame => &self.frame_buf,
-            .terrain => &self.terrain_buf,
+            .frame => self.frame_buf,
+            .terrain => self.terrain_buf,
         };
     }
 

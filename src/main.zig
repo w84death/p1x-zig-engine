@@ -43,6 +43,7 @@ pub fn main() void {
     defer c.fenster_close(&f);
     var mouse_buttons = MouseButtons.init();
     var renderer = Render.init(&buf);
+    defer renderer.deinit();
     var fui = Fui.init();
     var sm = StateMachine.init(State.main_menu);
     var fps_text_buf: [32]u8 = undefined;

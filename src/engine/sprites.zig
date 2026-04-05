@@ -26,14 +26,12 @@ pub const SpriteSheet = struct {
     row_span_offsets: []u32,
     spans: []Span,
     frame_pixels_per_frame: usize,
-    transparent_index: u8,
 
-    pub fn load_bmp_tiled(
+    pub fn load_bmp(
         allocator: std.mem.Allocator,
         path: []const u8,
         tile_w: i32,
         tile_h: i32,
-        transparent_index: u8,
     ) !SpriteSheet {
         if (tile_w <= 0 or tile_h <= 0) return SpriteError.InvalidTileSize;
 
@@ -77,6 +75,7 @@ pub const SpriteSheet = struct {
 
         const palette_count_u32 = if (colors_used == 0) CONF.BMP_DEFAULT_PALETTE_COLORS else colors_used;
         if (palette_count_u32 > CONF.BMP_DEFAULT_PALETTE_COLORS) return SpriteError.UnsupportedBmp;
+        const transparent_index = CONF.SPRITE_DEFAULT_TRANSPARENT_INDEX;
 
         const palette_count: usize = @intCast(palette_count_u32);
         const dib_size_usize: usize = @intCast(dib_size);
@@ -127,7 +126,7 @@ pub const SpriteSheet = struct {
         errdefer allocator.free(row_span_offsets);
 
         var spans_builder = std.ArrayListUnmanaged(Span){};
-        defer spans_builder.deinit(allocator);
+        errdefer spans_builder.deinit(allocator);
 
         row_span_offsets[0] = 0;
         var row_cursor: usize = 0;
@@ -182,45 +181,7 @@ pub const SpriteSheet = struct {
             .row_span_offsets = row_span_offsets,
             .spans = spans,
             .frame_pixels_per_frame = frame_pixels_per_frame,
-            .transparent_index = transparent_index,
         };
-    }
-
-    pub fn load_bmp(
-        allocator: std.mem.Allocator,
-        path: []const u8,
-    ) !SpriteSheet {
-        return load_bmp_with_transparency(allocator, path, CONF.SPRITE_DEFAULT_TRANSPARENT_INDEX);
-    }
-
-    pub fn load_bmp_with_transparency(
-        allocator: std.mem.Allocator,
-        path: []const u8,
-        transparent_index: u8,
-    ) !SpriteSheet {
-        var file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
-
-        const source = try file.readToEndAlloc(allocator, CONF.SPRITE_MAX_FILE_BYTES);
-        defer allocator.free(source);
-
-        if (source.len < CONF.BMP_FILE_HEADER_SIZE + CONF.BMP_DIB_HEADER_MIN_SIZE) return SpriteError.InvalidBmp;
-        if (source[0] != CONF.BMP_SIGNATURE_B or source[1] != CONF.BMP_SIGNATURE_M) return SpriteError.InvalidBmp;
-
-        const raw_height = try read_i32_le(source, CONF.BMP_DIB_OFFSET_HEIGHT);
-        if (raw_height == 0) return SpriteError.InvalidBmp;
-        const tile_h = if (raw_height < 0) -raw_height else raw_height;
-
-        return load_bmp_tiled(allocator, path, tile_h, tile_h, transparent_index);
-    }
-
-    pub fn load_bmp_default_transparency(
-        allocator: std.mem.Allocator,
-        path: []const u8,
-        tile_w: i32,
-        tile_h: i32,
-    ) !SpriteSheet {
-        return load_bmp_tiled(allocator, path, tile_w, tile_h, CONF.SPRITE_DEFAULT_TRANSPARENT_INDEX);
     }
 
     pub fn deinit(self: *SpriteSheet) void {

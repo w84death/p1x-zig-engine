@@ -7,18 +7,9 @@ const Sprite = @import("../engine/sprites.zig").Sprite;
 const SpriteSheet = @import("../engine/sprites.zig").SpriteSheet;
 const StateMachine = @import("../engine/state.zig").StateMachine;
 
-const SPRITE_PATH = "sprites/borowik.bmp";
-const SPRITE_SIZE = 32;
-const SPRITE_FRAME_DURATION = 0.12;
-const SPRITE_ANIM_LEN = 3;
-const SPRITE_SPEED_MIN = 18.0;
-const SPRITE_SPEED_MAX = 52.0;
 const SPRITE_DIR_HOLD_MIN = 0.4;
-const SPRITE_DIR_HOLD_MAX = 1.5;
+const SPRITE_DIR_HOLD_MAX = 1.0;
 const SPRITE_CURSOR_TURN_CHANCE = 72;
-const TERRAIN_PATH = "sprites/terrain.bmp";
-const TERRAIN_TILE_SIZE = 32;
-const TERRAIN_ANIM_LEN = 8;
 const TERRAIN_SPLAT_COUNT = 1000;
 const EXAMPLE_BG_COLOR = 0x4b692f;
 const TERRAIN_WEAR_DARKEN = 8;
@@ -44,11 +35,27 @@ pub fn ExampleScene(comptime Theme: type) type {
             sprite: Sprite,
             x: f32,
             y: f32,
+            size: i32,
             heading: f32,
             speed: f32,
             dir_timer: f32,
         };
-
+        const SpriteType = enum(u8) {
+            animated,
+            tileset,
+        };
+        const SpriteDefinition = struct {
+            type: SpriteType,
+            sprite_path: []const u8,
+            sprite_sheet: ?*SpriteSheet,
+            sprite_size: i32,
+            // sprite_anim_start: usize,
+            // sprite_anim_end: usize,
+            sprite_anim_len: usize,
+            sprite_anim_dur: f32,
+            speed_min: f32,
+            speed_max: f32,
+        };
         const action_groups = [_]ActionMenu.MenuGroup{
             .{
                 .title = "Example Menu",
@@ -68,9 +75,8 @@ pub fn ExampleScene(comptime Theme: type) type {
         vfx: Vfx,
         action_state: ActionState,
         action_menu: ActionMenu,
-        sprite_sheet: ?*SpriteSheet,
-        terrain_sheet: ?*SpriteSheet,
         sprites: std.ArrayListUnmanaged(SpriteInstance),
+        sprites_defs: [2]SpriteDefinition,
         prng: std.Random.DefaultPrng,
         vfx_enabled: bool,
         terrain_ready: bool,
@@ -86,52 +92,57 @@ pub fn ExampleScene(comptime Theme: type) type {
             self.vfx = Vfx.init();
             self.action_state = ActionState.init(Action.none);
             self.action_menu = ActionMenu.init(fui, &action_groups);
-            self.sprite_sheet = null;
-            self.terrain_sheet = null;
+            self.sprites_defs = [_]SpriteDefinition{
+                .{
+                    .type = .animated,
+                    .sprite_path = "sprites/borowik.bmp",
+                    .sprite_sheet = null,
+                    .sprite_size = 32,
+                    .sprite_anim_len = 3,
+                    .sprite_anim_dur = 0.12,
+                    .speed_min = 18.0,
+                    .speed_max = 52.0,
+                },
+                .{
+                    .type = .tileset,
+                    .sprite_path = "sprites/terrain.bmp",
+                    .sprite_sheet = null,
+                    .sprite_size = 32,
+                    .sprite_anim_len = 8,
+                    .sprite_anim_dur = 0,
+                    .speed_min = 0,
+                    .speed_max = 0,
+                },
+            };
             self.sprites = .{};
             self.prng = std.Random.DefaultPrng.init(seed);
             self.vfx_enabled = false;
+            self.last_yes_no = null;
             self.terrain_ready = false;
 
-            if (SpriteSheet.load_bmp(self.allocator, SPRITE_PATH)) |sheet| {
-                const sheet_ptr = self.allocator.create(SpriteSheet) catch |err| {
-                    std.log.err("failed to allocate sprite sheet: {s}", .{@errorName(err)});
-                    self.last_yes_no = null;
-                    return self;
-                };
-                sheet_ptr.* = sheet;
-                self.sprite_sheet = sheet_ptr;
-            } else |err| {
-                std.log.err("failed to load sprite sheet {s}: {s}", .{ SPRITE_PATH, @errorName(err) });
+            for (&self.sprites_defs) |*def| {
+                if (SpriteSheet.load_bmp(self.allocator, def.sprite_path, def.sprite_size, def.sprite_size)) |sheet| {
+                    const sheet_ptr = self.allocator.create(SpriteSheet) catch |err| {
+                        std.log.err("failed to allocate sprite sheet: {s}", .{@errorName(err)});
+                        return self;
+                    };
+                    sheet_ptr.* = sheet;
+                    def.sprite_sheet = sheet_ptr;
+                } else |err| {
+                    std.log.err("failed to load sprite sheet {s}: {s}", .{ def.sprite_path, @errorName(err) });
+                }
             }
-
-            if (SpriteSheet.load_bmp_tiled(self.allocator, TERRAIN_PATH, TERRAIN_TILE_SIZE, TERRAIN_TILE_SIZE, 0)) |sheet| {
-                const terrain_sheet_ptr = self.allocator.create(SpriteSheet) catch |err| {
-                    std.log.err("failed to allocate terrain sheet: {s}", .{@errorName(err)});
-                    self.last_yes_no = null;
-                    return self;
-                };
-                terrain_sheet_ptr.* = sheet;
-                self.terrain_sheet = terrain_sheet_ptr;
-            } else |err| {
-                std.log.err("failed to load terrain sheet {s}: {s}", .{ TERRAIN_PATH, @errorName(err) });
-            }
-
-            self.last_yes_no = null;
             return self;
         }
 
         pub fn deinit(self: *Self) void {
             self.sprites.deinit(self.allocator);
-            if (self.sprite_sheet) |sheet| {
-                sheet.deinit();
-                self.allocator.destroy(sheet);
-                self.sprite_sheet = null;
-            }
-            if (self.terrain_sheet) |sheet| {
-                sheet.deinit();
-                self.allocator.destroy(sheet);
-                self.terrain_sheet = null;
+            for (&self.sprites_defs) |*def| {
+                if (def.sprite_sheet) |sheet| {
+                    sheet.deinit();
+                    self.allocator.destroy(sheet);
+                    def.sprite_sheet = null;
+                }
             }
         }
 
@@ -161,8 +172,8 @@ pub fn ExampleScene(comptime Theme: type) type {
                     instance.dir_timer = random_range_f32(&rand, SPRITE_DIR_HOLD_MIN, SPRITE_DIR_HOLD_MAX);
 
                     if (rand.intRangeAtMost(u32, 0, 99) < SPRITE_CURSOR_TURN_CHANCE) {
-                        const center_x = instance.x + @as(f32, @floatFromInt(@divFloor(SPRITE_SIZE, 2)));
-                        const center_y = instance.y + @as(f32, @floatFromInt(@divFloor(SPRITE_SIZE, 2)));
+                        const center_x = instance.x + @as(f32, @floatFromInt(@divFloor(instance.size, 2)));
+                        const center_y = instance.y + @as(f32, @floatFromInt(@divFloor(instance.size, 2)));
                         const to_mouse_x = @as(f32, @floatFromInt(mouse.x)) - center_x;
                         const to_mouse_y = @as(f32, @floatFromInt(mouse.y)) - center_y;
                         if (to_mouse_x != 0.0 or to_mouse_y != 0.0) {
@@ -176,8 +187,8 @@ pub fn ExampleScene(comptime Theme: type) type {
                 instance.x += std.math.cos(instance.heading) * instance.speed * dt;
                 instance.y += std.math.sin(instance.heading) * instance.speed * dt;
 
-                const max_x_f: f32 = @floatFromInt(@max(0, CONF.SCREEN_W - SPRITE_SIZE));
-                const max_y_f: f32 = @floatFromInt(@max(0, CONF.SCREEN_H - SPRITE_SIZE));
+                const max_x_f: f32 = @floatFromInt(@max(0, CONF.SCREEN_W - instance.size));
+                const max_y_f: f32 = @floatFromInt(@max(0, CONF.SCREEN_H - instance.size));
                 if (instance.x < 0.0) {
                     instance.x = 0.0;
                     instance.heading = std.math.pi - instance.heading;
@@ -196,7 +207,7 @@ pub fn ExampleScene(comptime Theme: type) type {
                 instance.sprite.update(dt);
                 const draw_x: i32 = @intFromFloat(instance.x);
                 const draw_y: i32 = @intFromFloat(instance.y);
-                renderer.darken_buffer_pixel(.terrain, draw_x + @divFloor(SPRITE_SIZE, 2), draw_y + @divFloor(SPRITE_SIZE, 2), TERRAIN_WEAR_DARKEN);
+                renderer.darken_buffer_pixel(.terrain, draw_x + @divFloor(instance.size, 2), draw_y + @divFloor(instance.size, 2), TERRAIN_WEAR_DARKEN);
                 instance.sprite.draw(renderer, draw_x, draw_y);
             }
 
@@ -265,15 +276,16 @@ pub fn ExampleScene(comptime Theme: type) type {
         }
 
         fn spawn_random_sprite(self: *Self) !void {
-            const sheet = self.sprite_sheet orelse return;
+            const def = self.get_sprite_def(.animated) orelse return;
+            const sheet = def.sprite_sheet orelse return;
 
             const rand = self.prng.random();
-            var sprite = Sprite.init(sheet, SPRITE_FRAME_DURATION);
-            try sprite.set_animation(0, SPRITE_ANIM_LEN, SPRITE_FRAME_DURATION, true);
-            sprite.current_offset = rand.intRangeAtMost(usize, 0, SPRITE_ANIM_LEN - 1);
+            var sprite = Sprite.init(sheet, def.sprite_anim_dur);
+            try sprite.set_animation(0, def.sprite_anim_len, def.sprite_anim_dur, true);
+            sprite.current_offset = rand.intRangeAtMost(usize, 0, def.sprite_anim_len - 1);
 
-            const max_x = @max(0, CONF.SCREEN_W - SPRITE_SIZE);
-            const max_y = @max(0, CONF.SCREEN_H - SPRITE_SIZE);
+            const max_x = @max(0, CONF.SCREEN_W - def.sprite_size);
+            const max_y = @max(0, CONF.SCREEN_H - def.sprite_size);
 
             const x = rand.intRangeAtMost(i32, 0, max_x);
             const y = rand.intRangeAtMost(i32, 0, max_y);
@@ -282,8 +294,9 @@ pub fn ExampleScene(comptime Theme: type) type {
                 .sprite = sprite,
                 .x = @floatFromInt(x),
                 .y = @floatFromInt(y),
+                .size = def.sprite_size,
                 .heading = random_range_f32(&rand, 0.0, @as(f32, std.math.pi * 2.0)),
-                .speed = random_range_f32(&rand, SPRITE_SPEED_MIN, SPRITE_SPEED_MAX),
+                .speed = random_range_f32(&rand, def.speed_min, def.speed_max),
                 .dir_timer = random_range_f32(&rand, SPRITE_DIR_HOLD_MIN, SPRITE_DIR_HOLD_MAX),
             });
         }
@@ -295,24 +308,32 @@ pub fn ExampleScene(comptime Theme: type) type {
         fn init_terrain(self: *Self, renderer: *Render) void {
             renderer.clear_buffer(.terrain, EXAMPLE_BG_COLOR);
 
-            const terrain_sheet = self.terrain_sheet orelse return;
+            const terrain_def = self.get_sprite_def(.tileset) orelse return;
+            const terrain_sheet = terrain_def.sprite_sheet orelse return;
 
             renderer.set_target(.terrain);
             defer renderer.set_target(.frame);
             var stamp = Sprite.init(terrain_sheet, 0.0);
-            stamp.set_animation(0, TERRAIN_ANIM_LEN, 0.0, true) catch return;
+            stamp.set_animation(0, terrain_def.sprite_anim_len, 0.0, true) catch return;
 
             const rand = self.prng.random();
-            const max_x = @max(0, CONF.SCREEN_W - TERRAIN_TILE_SIZE);
-            const max_y = @max(0, CONF.SCREEN_H - TERRAIN_TILE_SIZE);
+            const max_x = @max(0, CONF.SCREEN_W - terrain_def.sprite_size);
+            const max_y = @max(0, CONF.SCREEN_H - terrain_def.sprite_size);
 
             var i: usize = 0;
             while (i < TERRAIN_SPLAT_COUNT) : (i += 1) {
-                stamp.current_offset = rand.intRangeAtMost(usize, 0, TERRAIN_ANIM_LEN - 1);
+                stamp.current_offset = rand.intRangeAtMost(usize, 0, terrain_def.sprite_anim_len - 1);
                 const x = rand.intRangeAtMost(i32, 0, max_x);
                 const y = rand.intRangeAtMost(i32, 0, max_y);
                 stamp.draw(renderer, x, y);
             }
+        }
+
+        fn get_sprite_def(self: *Self, sprite_type: SpriteType) ?*SpriteDefinition {
+            for (&self.sprites_defs) |*def| {
+                if (def.type == sprite_type) return def;
+            }
+            return null;
         }
     };
 }
