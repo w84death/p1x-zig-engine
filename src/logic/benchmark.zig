@@ -127,12 +127,12 @@ pub const BenchmarkLogic = struct {
         };
 
         for (&self.sprite_defs) |*def| {
-            if (SpriteSheet.load_bmp_bytes(self.allocator, def.sprite_data, def.sprite_size, def.sprite_size)) |sheet| {
-                const sheet_ptr = self.allocator.create(SpriteSheet) catch |err| {
-                    std.log.err("failed to allocate sprite sheet: {s}", .{@errorName(err)});
-                    return self;
-                };
-                sheet_ptr.* = sheet;
+            if (SpriteSheet.load(self.allocator, .{
+                .name = def.asset_name,
+                .source = def.sprite_data,
+                .tile_w = def.sprite_size,
+                .tile_h = def.sprite_size,
+            })) |sheet_ptr| {
                 def.sprite_sheet = sheet_ptr;
             } else |err| {
                 std.log.err("failed to load sprite sheet {s}: {s}", .{ def.asset_name, @errorName(err) });

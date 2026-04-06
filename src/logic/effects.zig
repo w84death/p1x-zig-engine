@@ -25,12 +25,16 @@ pub const Effects = struct {
 
         const bmp = @embedFile("../sprites/explosions.bmp");
         if (SpriteSheet.load_bmp_bytes(allocator, bmp, EXPLOSION_TILE_SIZE, EXPLOSION_TILE_SIZE)) |sheet| {
+            const frames = sheet.frame_count();
+            std.debug.print("[spritesheet] loaded {s} size={d}x{d} frames={d}\n", .{ "explosions.bmp", sheet.width, sheet.height, frames });
             const ptr = allocator.create(SpriteSheet) catch {
                 return self;
             };
             ptr.* = sheet;
             self.explosion_sheet = ptr;
-        } else |_| {}
+        } else |err| {
+            std.log.err("failed to load sprite sheet {s}: {s}", .{ "explosions.bmp", @errorName(err) });
+        }
 
         return self;
     }

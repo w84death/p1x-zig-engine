@@ -92,6 +92,8 @@ pub fn ExampleScene(comptime Theme: type) type {
             var cursor_sprite: ?Sprite = null;
 
             if (SpriteSheet.load_bmp_bytes(allocator, @embedFile("../sprites/hand.bmp"), 36, 56)) |sheet| {
+                const frames = sheet.frame_count();
+                std.debug.print("[spritesheet] loaded {s} size={d}x{d} frames={d}\n", .{ "hand.bmp", sheet.width, sheet.height, frames });
                 const sheet_ptr = allocator.create(SpriteSheet) catch null;
                 if (sheet_ptr) |ptr| {
                     ptr.* = sheet;
@@ -104,7 +106,9 @@ pub fn ExampleScene(comptime Theme: type) type {
                         cursor_sprite = sprite;
                     }
                 }
-            } else |_| {}
+            } else |err| {
+                std.log.err("failed to load sprite sheet {s}: {s}", .{ "hand.bmp", @errorName(err) });
+            }
 
             return .{
                 .fui = fui,

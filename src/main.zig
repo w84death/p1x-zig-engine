@@ -41,11 +41,21 @@ const AboutScene = @import("scenes/about.zig").AboutScene(UiTheme);
 const ExampleScene = @import("scenes/example.zig").ExampleScene(UiTheme);
 
 pub fn main() void {
+    std.debug.print("*************************************\n", .{});
+    std.debug.print(" BOROWIK ENGINE\n", .{});
+    std.debug.print(" by Krzysztof Krystian Jankowski\n", .{});
+    std.debug.print(" github.com/w84death/borowik-engine\n", .{});
+    std.debug.print("*************************************\n", .{});
+    std.debug.print("[init] start\n", .{});
+
     const settings = IO.load_or_create_settings() catch IO.Settings{
         .width = CONF.SCREEN_W,
         .height = CONF.SCREEN_H,
         .fullscreen = false,
     };
+
+    std.debug.print("[config] window size: {d}x{d}\n", .{ settings.width, settings.height });
+    std.debug.print("[config] to change window size edit settings.cfg\n", .{});
 
     const total_pixels: usize = @intCast(@as(i64, settings.width) * @as(i64, settings.height));
 
@@ -82,20 +92,24 @@ pub fn main() void {
     var logo_sheet: ?*SpriteSheet = null;
     var logo_sprite: ?Sprite = null;
 
-    if (SpriteSheet.load_bmp_bytes(allocator, @embedFile("sprites/logo.bmp"), 100, 26)) |sheet| {
-        const sheet_ptr = allocator.create(SpriteSheet) catch null;
-        if (sheet_ptr) |ptr| {
-            ptr.* = sheet;
-            logo_sheet = ptr;
+    if (SpriteSheet.load(allocator, .{
+        .name = "logo.bmp",
+        .source = @embedFile("sprites/logo.bmp"),
+        .tile_w = 100,
+        .tile_h = 26,
+    })) |sheet_ptr| {
+        logo_sheet = sheet_ptr;
 
-            var sprite = Sprite.init(ptr, 0.14);
-            const frame_count = @min(@as(usize, 3), ptr.frame_count());
-            if (frame_count > 0) {
-                sprite.set_animation(0, frame_count, 0.14, true) catch {};
-                logo_sprite = sprite;
-            }
+        var sprite = Sprite.init(sheet_ptr, 0.14);
+        const frame_count = @min(@as(usize, 3), sheet_ptr.frame_count());
+        if (frame_count > 0) {
+            sprite.set_animation(0, frame_count, 0.14, true) catch {};
+            logo_sprite = sprite;
         }
-    } else |_| {}
+    } else |err| {
+        std.log.err("failed to load sprite sheet {s}: {s}", .{ "logo.bmp", @errorName(err) });
+    }
+
     defer if (logo_sheet) |sheet| {
         sheet.deinit();
         allocator.destroy(sheet);
@@ -126,6 +140,8 @@ pub fn main() void {
     var about = AboutScene.init(&fui);
     var example = ExampleScene.init(std.heap.c_allocator, &fui, &renderer, &audio, &proc_audio, &sfx);
     defer example.deinit();
+
+    std.debug.print("[init] done\n", .{});
 
     var prev_state = sm.current;
 

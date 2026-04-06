@@ -27,6 +27,13 @@ pub const SpriteSheet = struct {
     spans: []Span,
     frame_pixels_per_frame: usize,
 
+    pub const LoadSettings = struct {
+        name: []const u8,
+        source: []const u8,
+        tile_w: i32,
+        tile_h: i32,
+    };
+
     pub fn load_bmp(
         allocator: std.mem.Allocator,
         path: []const u8,
@@ -193,6 +200,18 @@ pub const SpriteSheet = struct {
             .spans = spans,
             .frame_pixels_per_frame = frame_pixels_per_frame,
         };
+    }
+
+    pub fn load(allocator: std.mem.Allocator, settings: LoadSettings) !*SpriteSheet {
+        var sheet = try load_bmp_bytes(allocator, settings.source, settings.tile_w, settings.tile_h);
+        errdefer sheet.deinit();
+
+        const sheet_ptr = try allocator.create(SpriteSheet);
+        sheet_ptr.* = sheet;
+
+        const frames = sheet_ptr.frame_count();
+        std.debug.print("[spritesheet] loaded {s} size={d}x{d} frames={d}\n", .{ settings.name, sheet_ptr.width, sheet_ptr.height, frames });
+        return sheet_ptr;
     }
 
     pub fn deinit(self: *SpriteSheet) void {
