@@ -46,7 +46,7 @@ pub fn main() void {
     std.debug.print(" by Krzysztof Krystian Jankowski\n", .{});
     std.debug.print(" github.com/w84death/borowik-engine\n", .{});
     std.debug.print("*************************************\n", .{});
-    std.debug.print("[init] start\n", .{});
+    std.debug.print("[init] Main start\n", .{});
 
     const settings = IO.load_or_create_settings() catch IO.Settings{
         .width = CONF.SCREEN_W,
@@ -92,6 +92,7 @@ pub fn main() void {
     var logo_sheet: ?*SpriteSheet = null;
     var logo_sprite: ?Sprite = null;
 
+    std.debug.print("[init] Main sprites loading:\n", .{});
     if (SpriteSheet.load(allocator, .{
         .name = "logo.bmp",
         .source = @embedFile("sprites/logo.bmp"),
@@ -141,7 +142,7 @@ pub fn main() void {
     var example = ExampleScene.init(std.heap.c_allocator, &fui, &renderer, &audio, &proc_audio, &sfx);
     defer example.deinit();
 
-    std.debug.print("[init] done\n", .{});
+    std.debug.print("[init] Main initialized\n", .{});
 
     var prev_state = sm.current;
 

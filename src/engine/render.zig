@@ -63,6 +63,8 @@ pub const Render = struct {
         @memset(frame_buf, 0);
         @memset(terrain_buf, 0);
 
+        std.debug.print("[init] renderer initilized\n", .{});
+
         return .{
             .window_buf = buf,
             .width = w,

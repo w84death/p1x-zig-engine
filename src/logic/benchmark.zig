@@ -129,6 +129,7 @@ pub const BenchmarkLogic = struct {
             },
         };
 
+        std.debug.print("[init] Benchmark sprites loading:\n", .{});
         for (&self.sprite_defs) |*def| {
             if (SpriteSheet.load(self.allocator, .{
                 .name = def.asset_name,
@@ -143,6 +144,7 @@ pub const BenchmarkLogic = struct {
         }
 
         self.init_terrain(renderer);
+        std.debug.print("[init] Benchmark terrain initilized\n", .{});
         return self;
     }
 

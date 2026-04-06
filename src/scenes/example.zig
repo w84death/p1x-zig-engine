@@ -110,6 +110,8 @@ pub fn ExampleScene(comptime Theme: type) type {
                 std.log.err("failed to load sprite sheet {s}: {s}", .{ "hand.bmp", @errorName(err) });
             }
 
+            std.debug.print("[init] ExampleScene initilized\n", .{});
+
             return .{
                 .fui = fui,
                 .allocator = allocator,
