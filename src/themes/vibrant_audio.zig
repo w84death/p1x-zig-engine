@@ -37,4 +37,10 @@ pub const AudioTheme = struct {
         .{ .id = A.NOTE_D6, .dur = 0.02 },
         .{ .id = A.NOTE_C7, .dur = 0.03 },
     };
+
+    pub const SFX_PLANT = [_]A.Note{
+        .{ .id = A.NOTE_C6, .dur = 0.018 },
+        .{ .id = A.NOTE_E6, .dur = 0.022 },
+        .{ .id = A.NOTE_G6, .dur = 0.028 },
+    };
 };

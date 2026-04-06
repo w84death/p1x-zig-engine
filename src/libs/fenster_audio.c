@@ -106,15 +106,27 @@ int fenster_audio_open(struct fenster_audio *fa) {
 
 int fenster_audio_available(struct fenster_audio *fa) {
   int n = snd_pcm_avail(fa->pcm);
-  if (n < 0)
-    snd_pcm_recover(fa->pcm, n, 0);
+  if (n < 0) {
+    if (snd_pcm_recover(fa->pcm, n, 0) < 0)
+      return 0;
+    n = snd_pcm_avail(fa->pcm);
+  }
   return n;
 }
 
 void fenster_audio_write(struct fenster_audio *fa, float *buf, size_t n) {
-  int r = snd_pcm_writei(fa->pcm, buf, n);
-  if (r < 0)
-    snd_pcm_recover(fa->pcm, r, 0);
+  while (n > 0) {
+    int r = snd_pcm_writei(fa->pcm, buf, n);
+    if (r < 0) {
+      if (snd_pcm_recover(fa->pcm, r, 0) < 0)
+        return;
+      continue;
+    }
+    if (r == 0)
+      break;
+    buf += r;
+    n -= (size_t)r;
+  }
 }
 
 void fenster_audio_close(struct fenster_audio *fa) { snd_pcm_close(fa->pcm); }

@@ -276,8 +276,6 @@ pub const Audio = struct {
 
     pub fn update_audio(self: *Audio, dt: f32) void {
         _ = dt;
-        if (!self.playing or self.tune == null) return;
-
         const samples_per_frame: usize = @intFromFloat(self.sample_rate / 30.0);
         var buf: [1470]f32 = undefined;
 
@@ -288,6 +286,11 @@ pub const Audio = struct {
         var i: usize = 0;
 
         while (i < to_write) : (i += 1) {
+            if (!self.playing or self.tune == null) {
+                buf[i] = 0.0;
+                continue;
+            }
+
             // Advance note if time is up
             if (self.current_time >= self.tune.?[self.current_note].dur) {
                 const prev_note_id = self.tune.?[self.current_note].id;
@@ -296,7 +299,9 @@ pub const Audio = struct {
 
                 if (self.current_note >= self.tune.?.len) {
                     self.playing = false;
-                    break;
+                    self.tune = null;
+                    buf[i] = 0.0;
+                    continue;
                 }
 
                 const next_note = self.tune.?[self.current_note];

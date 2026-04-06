@@ -132,6 +132,7 @@ pub fn ExampleScene(comptime Theme: type) type {
                 cursor.update(dt);
             }
             if (mouse.just_right_pressed) {
+                self.sfx.play(.plant);
                 self.benchmark.splat_plant(mouse.x, mouse.y, renderer);
             }
             if (self.explosions_enabled and mouse.just_pressed) {

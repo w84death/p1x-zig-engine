@@ -6,6 +6,7 @@ pub const Effect = enum {
     menu_back,
     menu_popup,
     explosion,
+    plant,
 };
 
 pub const Sfx = struct {
@@ -14,14 +15,23 @@ pub const Sfx = struct {
     menu_back_notes: []const Note,
     menu_popup_notes: []const Note,
     explosion_notes: []const Note,
+    plant_notes: []const Note,
 
-    pub fn init(audio: *Audio, menu_main_notes: []const Note, menu_back_notes: []const Note, menu_popup_notes: []const Note, explosion_notes: []const Note) Sfx {
+    pub fn init(
+        audio: *Audio,
+        menu_main_notes: []const Note,
+        menu_back_notes: []const Note,
+        menu_popup_notes: []const Note,
+        explosion_notes: []const Note,
+        plant_notes: []const Note,
+    ) Sfx {
         return .{
             .audio = audio,
             .menu_main_notes = menu_main_notes,
             .menu_back_notes = menu_back_notes,
             .menu_popup_notes = menu_popup_notes,
             .explosion_notes = explosion_notes,
+            .plant_notes = plant_notes,
         };
     }
 
@@ -31,6 +41,7 @@ pub const Sfx = struct {
             .menu_back => self.menu_back_notes,
             .menu_popup => self.menu_popup_notes,
             .explosion => self.explosion_notes,
+            .plant => self.plant_notes,
         };
         if (tune.len == 0) return;
         self.audio.play_tune(tune);

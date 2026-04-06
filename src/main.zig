@@ -68,7 +68,14 @@ pub fn main() void {
     defer renderer.deinit();
     var audio = Audio.init();
     defer audio.deinit();
-    var sfx = Sfx.init(&audio, AudioTheme.SFX_MENU_MAIN[0..], AudioTheme.SFX_MENU_BACK[0..], AudioTheme.SFX_POPUP[0..], AudioTheme.SFX_EXPLOSION[0..]);
+    var sfx = Sfx.init(
+        &audio,
+        AudioTheme.SFX_MENU_MAIN[0..],
+        AudioTheme.SFX_MENU_BACK[0..],
+        AudioTheme.SFX_POPUP[0..],
+        AudioTheme.SFX_EXPLOSION[0..],
+        AudioTheme.SFX_PLANT[0..],
+    );
     var proc_audio = ProcAudio.init(std.heap.c_allocator);
     defer proc_audio.deinit();
     var logo_sheet: ?*SpriteSheet = null;
