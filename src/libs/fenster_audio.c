@@ -101,7 +101,7 @@ int fenster_audio_open(struct fenster_audio *fa) {
   if (snd_pcm_open(&fa->pcm, "default", 0, 0))
     return -1;
   int fmt = (*(unsigned char *)(&(uint16_t){1})) ? 14 : 15;
-  return snd_pcm_set_params(fa->pcm, fmt, 3, 1, FENSTER_SAMPLE_RATE, 1, 100000);
+  return snd_pcm_set_params(fa->pcm, fmt, 3, 1, FENSTER_SAMPLE_RATE, 1, 200000);
 }
 
 int fenster_audio_available(struct fenster_audio *fa) {

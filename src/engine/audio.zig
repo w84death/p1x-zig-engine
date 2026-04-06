@@ -276,97 +276,96 @@ pub const Audio = struct {
 
     pub fn update_audio(self: *Audio, dt: f32) void {
         _ = dt;
-        const samples_per_frame: usize = @intFromFloat(self.sample_rate / 30.0);
-        var buf: [1470]f32 = undefined;
+        var buf: [2048]f32 = undefined;
 
-        const avail = fenster_audio_available(self.fa_ptr);
-        if (avail <= 0) return;
+        var avail = fenster_audio_available(self.fa_ptr);
+        while (avail > 0) {
+            const to_write = @min(buf.len, @as(usize, @intCast(avail)));
+            var i: usize = 0;
 
-        const to_write = @min(samples_per_frame, @as(usize, @intCast(avail)));
-        var i: usize = 0;
-
-        while (i < to_write) : (i += 1) {
-            if (!self.playing or self.tune == null) {
-                buf[i] = 0.0;
-                continue;
-            }
-
-            // Advance note if time is up
-            if (self.current_time >= self.tune.?[self.current_note].dur) {
-                const prev_note_id = self.tune.?[self.current_note].id;
-                self.current_note += 1;
-                self.current_time = 0.0;
-
-                if (self.current_note >= self.tune.?.len) {
-                    self.playing = false;
-                    self.tune = null;
+            while (i < to_write) : (i += 1) {
+                if (!self.playing or self.tune == null) {
                     buf[i] = 0.0;
                     continue;
                 }
 
-                const next_note = self.tune.?[self.current_note];
-                if (next_note.id != prev_note_id) {
-                    // Different note - reset envelope for new attack
-                    self.note_start_time = 0.0;
-                    self.current_note_id = next_note.id;
-                }
-                // If same note: continue with accumulated note_start_time (legato)
-            }
+                // Advance note if time is up
+                if (self.current_time >= self.tune.?[self.current_note].dur) {
+                    const prev_note_id = self.tune.?[self.current_note].id;
+                    self.current_note += 1;
+                    self.current_time = 0.0;
 
-            const note = self.tune.?[self.current_note];
-            if (note.id >= NOTE_TABLE.len) {
-                buf[i] = 0.0;
+                    if (self.current_note >= self.tune.?.len) {
+                        self.playing = false;
+                        self.tune = null;
+                        buf[i] = 0.0;
+                        continue;
+                    }
+
+                    const next_note = self.tune.?[self.current_note];
+                    if (next_note.id != prev_note_id) {
+                        // Different note - reset envelope for new attack
+                        self.note_start_time = 0.0;
+                        self.current_note_id = next_note.id;
+                    }
+                    // If same note: continue with accumulated note_start_time (legato)
+                }
+
+                const note = self.tune.?[self.current_note];
+                if (note.id >= NOTE_TABLE.len) {
+                    buf[i] = 0.0;
+                    self.current_time += 1.0 / self.sample_rate;
+                    self.note_start_time += 1.0 / self.sample_rate;
+                    continue;
+                }
+                const base_freq = NOTE_TABLE[note.id].freq;
+
+                if (base_freq == 0.0) {
+                    buf[i] = 0.0;
+                } else {
+                    // Calculate envelope - check if we're in a tied group
+                    const is_last = self.isLastInTiedGroup();
+                    const tied_dur = self.calculateTiedGroupDuration();
+                    const envelope = self.calculateEnvelope(self.note_start_time, tied_dur, is_last);
+
+                    // Calculate analog pitch drift
+                    self.vibrato_phase += VIBRATO_RATE / self.sample_rate;
+                    if (self.vibrato_phase > 1.0) self.vibrato_phase -= 1.0;
+
+                    self.drift_phase += DRIFT_RATE / self.sample_rate;
+                    if (self.drift_phase > 1.0) self.drift_phase -= 1.0;
+
+                    // Sine-based LFOs for smooth pitch variation
+                    const vibrato = @sin(self.vibrato_phase * 2.0 * std.math.pi) * VIBRATO_DEPTH;
+                    const drift = @sin(self.drift_phase * 2.0 * std.math.pi) * DRIFT_DEPTH;
+
+                    // Modulated frequency
+                    const mod_freq = base_freq * (1.0 + vibrato + drift);
+
+                    // Advance phase
+                    self.phase += mod_freq / self.sample_rate;
+                    if (self.phase >= 1.0) self.phase -= 1.0;
+
+                    // Generate square wave
+                    const phase = self.phase;
+                    var wave: f32 = if (phase < 0.5) 1.0 else -1.0;
+
+                    // Add slight noise for analog character
+                    const noise = (prngFloat(&self.rng_state) - 0.5) * NOISE_AMOUNT;
+                    wave += noise;
+
+                    // Apply envelope and output
+                    buf[i] = wave * envelope * 0.4;
+                }
+
                 self.current_time += 1.0 / self.sample_rate;
                 self.note_start_time += 1.0 / self.sample_rate;
-                continue;
-            }
-            const base_freq = NOTE_TABLE[note.id].freq;
-
-            if (base_freq == 0.0) {
-                buf[i] = 0.0;
-            } else {
-                // Calculate envelope - check if we're in a tied group
-                const is_last = self.isLastInTiedGroup();
-                const tied_dur = self.calculateTiedGroupDuration();
-                const envelope = self.calculateEnvelope(self.note_start_time, tied_dur, is_last);
-
-                // Calculate analog pitch drift
-                self.vibrato_phase += VIBRATO_RATE / self.sample_rate;
-                if (self.vibrato_phase > 1.0) self.vibrato_phase -= 1.0;
-
-                self.drift_phase += DRIFT_RATE / self.sample_rate;
-                if (self.drift_phase > 1.0) self.drift_phase -= 1.0;
-
-                // Sine-based LFOs for smooth pitch variation
-                const vibrato = @sin(self.vibrato_phase * 2.0 * std.math.pi) * VIBRATO_DEPTH;
-                const drift = @sin(self.drift_phase * 2.0 * std.math.pi) * DRIFT_DEPTH;
-
-                // Modulated frequency
-                const mod_freq = base_freq * (1.0 + vibrato + drift);
-
-                // Advance phase
-                self.phase += mod_freq / self.sample_rate;
-                if (self.phase >= 1.0) self.phase -= 1.0;
-
-                // Generate square wave
-                const phase = self.phase;
-                var wave: f32 = if (phase < 0.5) 1.0 else -1.0;
-
-                // Add slight noise for analog character
-                const noise = (prngFloat(&self.rng_state) - 0.5) * NOISE_AMOUNT;
-                wave += noise;
-
-                // Apply envelope and output
-                buf[i] = wave * envelope * 0.4;
             }
 
-            self.current_time += 1.0 / self.sample_rate;
-            self.note_start_time += 1.0 / self.sample_rate;
-        }
-
-        // Write to audio
-        if (i > 0) {
-            fenster_audio_write(self.fa_ptr, @as([*]f32, @ptrCast(&buf[0])), i);
+            if (to_write > 0) {
+                fenster_audio_write(self.fa_ptr, @as([*]f32, @ptrCast(&buf[0])), to_write);
+            }
+            avail = fenster_audio_available(self.fa_ptr);
         }
     }
     pub fn play_tune(self: *Audio, tune: Tune) void {
