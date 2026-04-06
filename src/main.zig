@@ -18,11 +18,12 @@ const Sprite = @import("engine/sprites.zig").Sprite;
 const SpriteSheet = @import("engine/sprites.zig").SpriteSheet;
 const Sfx = @import("logic/sfx.zig").Sfx;
 const SfxEffect = @import("logic/sfx.zig").Effect;
-const THEME = @import("themes/default.zig").Theme;
-//const THEME = @import("themes/smol.zig").Theme;
-//const THEME = @import("themes/shroom.zig").Theme;
-//const THEME = @import("themes/gray.zig").Theme;
-const Fui = @import("engine/fui.zig").Fui(THEME);
+const UiTheme = @import("themes/default.zig").UiTheme;
+//const UiTheme = @import("themes/smol.zig").UiTheme;
+//const UiTheme = @import("themes/shroom.zig").UiTheme;
+//const UiTheme = @import("themes/gray.zig").UiTheme;
+const AudioTheme = @import("themes/default_audio.zig").AudioTheme;
+const Fui = @import("engine/fui.zig").Fui(UiTheme);
 const MouseButtons = @import("engine/mouse.zig").MouseButtons;
 const State = enum {
     main_menu,
@@ -31,12 +32,12 @@ const State = enum {
     quit,
 };
 const StateMachine = @import("engine/state.zig").StateMachine(State);
-const Menu = @import("engine/menu.zig").Menu(State, StateMachine, THEME);
+const Menu = @import("engine/menu.zig").Menu(State, StateMachine, UiTheme);
 
 // Scenes
-const MenuScene = @import("scenes/menu.zig").MenuScene(Menu, THEME);
-const AboutScene = @import("scenes/about.zig").AboutScene(THEME);
-const ExampleScene = @import("scenes/example.zig").ExampleScene(THEME);
+const MenuScene = @import("scenes/menu.zig").MenuScene(Menu, UiTheme);
+const AboutScene = @import("scenes/about.zig").AboutScene(UiTheme);
+const ExampleScene = @import("scenes/example.zig").ExampleScene(UiTheme);
 
 pub fn main() void {
     const settings = IO.load_or_create_settings() catch IO.Settings{
@@ -67,7 +68,7 @@ pub fn main() void {
     defer renderer.deinit();
     var audio = Audio.init();
     defer audio.deinit();
-    var sfx = Sfx.init(&audio, THEME.SFX_MENU_MAIN[0..], THEME.SFX_MENU_BACK[0..], THEME.SFX_POPUP[0..], THEME.SFX_EXPLOSION[0..]);
+    var sfx = Sfx.init(&audio, AudioTheme.SFX_MENU_MAIN[0..], AudioTheme.SFX_MENU_BACK[0..], AudioTheme.SFX_POPUP[0..], AudioTheme.SFX_EXPLOSION[0..]);
     var proc_audio = ProcAudio.init(std.heap.c_allocator);
     defer proc_audio.deinit();
     var logo_sheet: ?*SpriteSheet = null;
@@ -100,14 +101,14 @@ pub fn main() void {
         .{
             .title = "Main Menu",
             .items = &[_]Menu.MenuItem{
-                .{ .text = "Example", .normal_color = THEME.MENU_NORMAL_COLOR, .hover_color = THEME.MENU_HIGHLIGHT_COLOR, .target_state = State.example },
+                .{ .text = "Example", .normal_color = UiTheme.MENU_NORMAL_COLOR, .hover_color = UiTheme.MENU_HIGHLIGHT_COLOR, .target_state = State.example },
             },
         },
         .{
             .title = "System",
             .items = &[_]Menu.MenuItem{
-                .{ .text = "About", .normal_color = THEME.MENU_SECONDARY_COLOR, .hover_color = THEME.MENU_HIGHLIGHT_COLOR, .target_state = State.about },
-                .{ .text = "Quit", .normal_color = THEME.MENU_SECONDARY_COLOR, .hover_color = THEME.MENU_DANGER_COLOR, .target_state = State.quit },
+                .{ .text = "About", .normal_color = UiTheme.MENU_SECONDARY_COLOR, .hover_color = UiTheme.MENU_HIGHLIGHT_COLOR, .target_state = State.about },
+                .{ .text = "Quit", .normal_color = UiTheme.MENU_SECONDARY_COLOR, .hover_color = UiTheme.MENU_DANGER_COLOR, .target_state = State.quit },
             },
         },
     };
@@ -128,7 +129,7 @@ pub fn main() void {
         }
         prev_state = sm.current;
         renderer.begin_frame();
-        if (!sm.is(.example)) renderer.clear_background(THEME.BG_COLOR);
+        if (!sm.is(.example)) renderer.clear_background(UiTheme.BG_COLOR);
 
         const mouse = mouse_buttons.update(f.x, f.y, @intCast(f.mouse));
 
@@ -172,7 +173,7 @@ pub fn main() void {
         renderer.perf_begin_draw();
 
         // Top global navigation
-        if (!sm.is(State.main_menu) and fui.button(&renderer, fui.pivotX(.top_left), fui.pivotY(.top_left), 120, 32, "< Menu", THEME.MENU_SECONDARY_COLOR, THEME.MENU_HIGHLIGHT_COLOR, mouse)) {
+        if (!sm.is(State.main_menu) and fui.button(&renderer, fui.pivotX(.top_left), fui.pivotY(.top_left), 120, 32, "< Menu", UiTheme.MENU_SECONDARY_COLOR, UiTheme.MENU_HIGHLIGHT_COLOR, mouse)) {
             sfx.play(SfxEffect.menu_back);
             sm.go_to(State.main_menu);
         }
@@ -184,7 +185,7 @@ pub fn main() void {
             s.draw(&renderer, logo_x, logo_y);
         }
         fui.draw_version(&renderer);
-        renderer.draw_perf_overlay(&fui, THEME);
+        renderer.draw_perf_overlay(&fui, UiTheme);
 
         if (!sm.is(State.example)) {
             fui.draw_cursor_lines(&renderer, .{ f.x, f.y });
