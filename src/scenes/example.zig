@@ -16,7 +16,6 @@ const EFFECTS_MAX_PARTICLES = 512;
 
 pub fn ExampleScene(comptime Theme: type) type {
     const Fui = @import("../engine/fui.zig").Fui(Theme);
-    const Vfx = @import("../logic/vfx.zig").Vfx(Theme);
     const Benchmark = @import("../logic/benchmark.zig").BenchmarkLogic;
 
     const Action = enum {
@@ -25,7 +24,6 @@ pub fn ExampleScene(comptime Theme: type) type {
         info_popup,
         yes_no_popup_init,
         yes_no_popup,
-        toggle_vfx,
         toggle_sprite_trails,
         toggle_cursor_follow,
         toggle_simulation,
@@ -47,22 +45,35 @@ pub fn ExampleScene(comptime Theme: type) type {
                 .items = &[_]ActionMenu.MenuItem{
                     .{ .text = "Info Popup", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.info_popup_init },
                     .{ .text = "Ask Yes/No", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.yes_no_popup_init },
-                    .{ .text = "Toggle VFX", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.toggle_vfx },
+                },
+            },
+            .{
+                .title = "Sound Effects",
+                .items = &[_]ActionMenu.MenuItem{
+                    .{ .text = "Play Proc Music", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.play_proc_music },
+                },
+            },
+            .{
+                .title = "Settings",
+                .items = &[_]ActionMenu.MenuItem{
                     .{ .text = "Toggle Sprite Trails", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.toggle_sprite_trails },
+                    .{ .text = "Toggle Explosions", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.toggle_explosions },
                     .{ .text = "Toggle Cursor Follow", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.toggle_cursor_follow },
                     .{ .text = "Toggle Simulation", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.toggle_simulation },
-                    .{ .text = "Toggle Explosions", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.toggle_explosions },
-                    .{ .text = "Play Proc Music", .normal_color = Theme.MENU_SECONDARY_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.play_proc_music },
-                    .{ .text = "Spawn 1 Sprite", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.spawn_sprite },
-                    .{ .text = "Spawn 100 sprites", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.spawn_100_sprites },
-                    .{ .text = "Spawn 10K sprites", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.spawn_10k_sprites },
+                },
+            },
+            .{
+                .title = "Spawn Entity",
+                .items = &[_]ActionMenu.MenuItem{
+                    .{ .text = "Spawn Single", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.spawn_sprite },
+                    .{ .text = "Spawn 100", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.spawn_100_sprites },
+                    .{ .text = "Spawn 10.000", .normal_color = Theme.MENU_NORMAL_COLOR, .hover_color = Theme.MENU_HIGHLIGHT_COLOR, .target_state = Action.spawn_10k_sprites },
                 },
             },
         };
 
         fui: *Fui,
         allocator: std.mem.Allocator,
-        vfx: Vfx,
         benchmark: Benchmark,
         effects: Effects,
         cursor_sheet: ?*SpriteSheet,
@@ -72,7 +83,6 @@ pub fn ExampleScene(comptime Theme: type) type {
         sfx: *Sfx,
         action_state: ActionState,
         action_menu: ActionMenu,
-        vfx_enabled: bool,
         explosions_enabled: bool,
         ui_visible: bool,
         last_yes_no: ?bool = null,
@@ -99,7 +109,6 @@ pub fn ExampleScene(comptime Theme: type) type {
             return .{
                 .fui = fui,
                 .allocator = allocator,
-                .vfx = Vfx.init(renderer.width, renderer.height),
                 .benchmark = Benchmark.init(allocator, renderer),
                 .effects = Effects.init(allocator, sfx, EFFECTS_MAX_PARTICLES),
                 .cursor_sheet = cursor_sheet,
@@ -109,7 +118,6 @@ pub fn ExampleScene(comptime Theme: type) type {
                 .sfx = sfx,
                 .action_state = ActionState.init(Action.none),
                 .action_menu = ActionMenu.init(fui, &action_groups),
-                .vfx_enabled = false,
                 .explosions_enabled = false,
                 .ui_visible = true,
                 .last_yes_no = null,
@@ -142,11 +150,9 @@ pub fn ExampleScene(comptime Theme: type) type {
         }
 
         pub fn draw(self: *Self, mouse: Mouse, dt: f32, renderer: *Render) void {
+            _ = dt;
             self.benchmark.begin_frame(renderer);
             self.benchmark.draw_sprites(renderer);
-            if (self.vfx_enabled and self.benchmark.is_simulation_enabled()) {
-                self.vfx.draw(renderer, Theme.SECONDARY_COLOR, dt);
-            }
             self.effects.draw(renderer);
             self.handle_top_controls(mouse, renderer);
             self.handle_ui_interactions(mouse, renderer);
@@ -181,11 +187,6 @@ pub fn ExampleScene(comptime Theme: type) type {
             if (!self.ui_visible) return;
 
             switch (self.action_state.current) {
-                .toggle_vfx => {
-                    self.vfx_enabled = !self.vfx_enabled;
-                    self.sfx.play(if (self.vfx_enabled) SfxEffect.menu_main else SfxEffect.menu_back);
-                    self.action_state.go_to(Action.none);
-                },
                 .toggle_sprite_trails => {
                     const st_enabled = self.benchmark.toggle_sprite_trails();
                     self.sfx.play(if (st_enabled) SfxEffect.menu_main else SfxEffect.menu_back);
@@ -261,7 +262,6 @@ pub fn ExampleScene(comptime Theme: type) type {
                 },
                 .info_popup_init, .yes_no_popup_init => {},
                 .none,
-                .toggle_vfx,
                 .toggle_sprite_trails,
                 .toggle_cursor_follow,
                 .toggle_simulation,
@@ -300,20 +300,17 @@ pub fn ExampleScene(comptime Theme: type) type {
             const count_text = std.fmt.bufPrint(&count_buf, "Sprites: {d}", .{self.benchmark.sprite_count()}) catch "Sprites: ?";
             self.fui.draw_text(renderer, count_text, sx, sy, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
 
-            const vfx_text: [:0]const u8 = if (self.vfx_enabled) "VFX: ON" else "VFX: OFF";
-            self.fui.draw_text(renderer, vfx_text, sx, sy + 24, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
-
             const trails_text: [:0]const u8 = if (self.benchmark.is_sprite_trails_enabled()) "Trails: ON" else "Trails: OFF";
-            self.fui.draw_text(renderer, trails_text, sx, sy + 48, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
+            self.fui.draw_text(renderer, trails_text, sx, sy + 24, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
 
             const follow_text: [:0]const u8 = if (self.benchmark.is_cursor_follow_enabled()) "Follow: ON" else "Follow: OFF";
-            self.fui.draw_text(renderer, follow_text, sx, sy + 72, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
+            self.fui.draw_text(renderer, follow_text, sx, sy + 48, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
 
             const simulation_text: [:0]const u8 = if (self.benchmark.is_simulation_enabled()) "Simulation: ON" else "Simulation: OFF";
-            self.fui.draw_text(renderer, simulation_text, sx, sy + 96, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
+            self.fui.draw_text(renderer, simulation_text, sx, sy + 72, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
 
             const explosions_text: [:0]const u8 = if (self.explosions_enabled) "Explosions: ON" else "Explosions: OFF";
-            self.fui.draw_text(renderer, explosions_text, sx, sy + 120, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
+            self.fui.draw_text(renderer, explosions_text, sx, sy + 96, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
         }
     };
 }
