@@ -7,6 +7,7 @@ const SpriteSheet = @import("../engine/sprites.zig").SpriteSheet;
 const SPRITE_DIR_HOLD_MIN = 0.4;
 const SPRITE_DIR_HOLD_MAX = 1.0;
 const SPRITE_CURSOR_TURN_CHANCE = 72;
+const TRAIL_SPLAT_INTERVAL_FRAMES: u32 = 12;
 const TERRAIN_SPLAT_COUNT = 2048;
 const PLANTS_SPLAT_COUNT = 128;
 const EXAMPLE_BG_COLOR = 0x595652;
@@ -46,6 +47,7 @@ pub const BenchmarkLogic = struct {
     sprite_defs: [5]SpriteDefinition,
     prng: std.Random.DefaultPrng,
     sprite_trails_enabled: bool,
+    trail_splat_timer: u32,
     cursor_follow_enabled: bool,
     simulation_enabled: bool,
     screen_width: i32,
@@ -60,6 +62,7 @@ pub const BenchmarkLogic = struct {
         self.sprites = .{};
         self.prng = std.Random.DefaultPrng.init(seed);
         self.sprite_trails_enabled = false;
+        self.trail_splat_timer = 0;
         self.cursor_follow_enabled = false;
         self.simulation_enabled = true;
         self.screen_width = renderer.width;
@@ -208,18 +211,23 @@ pub const BenchmarkLogic = struct {
 
             const should_splat_trails = self.sprite_trails_enabled and trails_def.sprite_sheet != null and trails_def.sprite_anim_len > 0;
             if (should_splat_trails) {
-                renderer.set_target(.terrain);
-                defer renderer.set_target(.frame);
+                if (self.trail_splat_timer >= TRAIL_SPLAT_INTERVAL_FRAMES) {
+                    renderer.set_target(.terrain);
+                    defer renderer.set_target(.frame);
 
-                const sheet = trails_def.sprite_sheet.?;
-                const frame_offset = rand.intRangeAtMost(usize, 0, trails_def.sprite_anim_len - 1);
-                const frame = trails_def.sprite_anim_start + frame_offset;
-                const center_x: i32 = @as(i32, @intFromFloat(prev_x)) + @divFloor(instance.size, 2);
-                const center_y: i32 = @as(i32, @intFromFloat(prev_y)) + @divFloor(instance.size, 2);
-                const draw_x = center_x - @divFloor(trails_def.sprite_size, 2);
-                const draw_y = center_y - @divFloor(trails_def.sprite_size, 2);
+                    const sheet = trails_def.sprite_sheet.?;
+                    const frame_offset = rand.intRangeAtMost(usize, 0, trails_def.sprite_anim_len - 1);
+                    const frame = trails_def.sprite_anim_start + frame_offset;
+                    const center_x: i32 = @as(i32, @intFromFloat(prev_x)) + @divFloor(instance.size, 2);
+                    const center_y: i32 = @as(i32, @intFromFloat(prev_y)) + @divFloor(instance.size, 2);
+                    const draw_x = center_x - @divFloor(trails_def.sprite_size, 2);
+                    const draw_y = center_y - @divFloor(trails_def.sprite_size, 2);
 
-                sheet.draw_frame(renderer, frame, draw_x, draw_y);
+                    sheet.draw_frame(renderer, frame, draw_x, draw_y);
+                    self.trail_splat_timer = 0;
+                } else {
+                    self.trail_splat_timer += 1;
+                }
             }
         }
     }
