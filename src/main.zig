@@ -5,6 +5,7 @@
 // *************************************
 
 const std = @import("std");
+const builtin = @import("builtin");
 const c = @cImport({
     @cInclude("fenster.h");
     @cInclude("fenster_audio.h");
@@ -44,6 +45,28 @@ fn playSfx(audio: *Audio, effect: AudioTheme.Effect) void {
     audio.play_tune(tune);
 }
 
+fn hideSystemCursor(f: *c.fenster) void {
+    switch (builtin.os.tag) {
+        .windows => {
+            _ = c.ShowCursor(0);
+        },
+        else => {
+            var data = [_]u8{0};
+            const bitmap = c.XCreateBitmapFromData(f.dpy, f.w, @as([*c]const u8, @ptrCast(&data[0])), 1, 1);
+            if (bitmap == 0) return;
+            defer _ = c.XFreePixmap(f.dpy, bitmap);
+
+            var color: c.XColor = std.mem.zeroes(c.XColor);
+            const cursor = c.XCreatePixmapCursor(f.dpy, bitmap, bitmap, &color, &color, 0, 0);
+            if (cursor == 0) return;
+            defer _ = c.XFreeCursor(f.dpy, cursor);
+
+            _ = c.XDefineCursor(f.dpy, f.w, cursor);
+            _ = c.XFlush(f.dpy);
+        },
+    }
+}
+
 pub fn main() void {
     std.debug.print("*************************************\n", .{});
     std.debug.print(" BOROWIK ENGINE\n", .{});
@@ -77,6 +100,7 @@ pub fn main() void {
         .fullscreen = fullscreen_flag,
     });
     _ = c.fenster_open(&f);
+    hideSystemCursor(&f);
     defer c.fenster_close(&f);
     var mouse_buttons = MouseButtons.init();
     var renderer = Render.init(raw_buf, settings.width, settings.height);
