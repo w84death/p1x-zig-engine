@@ -4,19 +4,18 @@ const ProcAudio = @import("../engine/proc_audio.zig").ProcAudio;
 const ProcAudioProfile = @import("../engine/proc_audio.zig").Profile;
 const Sprite = @import("../engine/sprites.zig").Sprite;
 const SpriteSheet = @import("../engine/sprites.zig").SpriteSheet;
-const Sfx = @import("../logic/sfx.zig").Sfx;
-const SfxEffect = @import("../logic/sfx.zig").Effect;
 const Mouse = @import("../engine/mouse.zig").Mouse;
 const Menu = @import("../engine/menu.zig").Menu;
 const Render = @import("../engine/render.zig").Render;
 const StateMachine = @import("../engine/state.zig").StateMachine;
-const Effects = @import("../logic/effects.zig").Effects;
 
 const EFFECTS_MAX_PARTICLES = 512;
 
-pub fn ExampleScene(comptime Theme: type) type {
+pub fn ExampleScene(comptime Theme: type, comptime AudioCfg: type) type {
     const Fui = @import("../engine/fui.zig").Fui(Theme);
     const Benchmark = @import("../logic/benchmark.zig").BenchmarkLogic;
+    const Effects = @import("../logic/effects.zig").Effects(AudioCfg);
+    const AudioEffect = AudioCfg.Effect;
 
     const Action = enum {
         none,
@@ -80,14 +79,13 @@ pub fn ExampleScene(comptime Theme: type) type {
         cursor_sprite: ?Sprite,
         audio: *Audio,
         proc_audio: *ProcAudio,
-        sfx: *Sfx,
         action_state: ActionState,
         action_menu: ActionMenu,
         explosions_enabled: bool,
         ui_visible: bool,
         last_yes_no: ?bool = null,
 
-        pub fn init(allocator: std.mem.Allocator, fui: *Fui, renderer: *Render, audio: *Audio, proc_audio: *ProcAudio, sfx: *Sfx) Self {
+        pub fn init(allocator: std.mem.Allocator, fui: *Fui, renderer: *Render, audio: *Audio, proc_audio: *ProcAudio) Self {
             var cursor_sheet: ?*SpriteSheet = null;
             var cursor_sprite: ?Sprite = null;
 
@@ -116,12 +114,11 @@ pub fn ExampleScene(comptime Theme: type) type {
                 .fui = fui,
                 .allocator = allocator,
                 .benchmark = Benchmark.init(allocator, renderer),
-                .effects = Effects.init(allocator, sfx, EFFECTS_MAX_PARTICLES),
+                .effects = Effects.init(allocator, audio, EFFECTS_MAX_PARTICLES),
                 .cursor_sheet = cursor_sheet,
                 .cursor_sprite = cursor_sprite,
                 .audio = audio,
                 .proc_audio = proc_audio,
-                .sfx = sfx,
                 .action_state = ActionState.init(Action.none),
                 .action_menu = ActionMenu.init(fui, &action_groups),
                 .explosions_enabled = false,
@@ -146,7 +143,7 @@ pub fn ExampleScene(comptime Theme: type) type {
                 cursor.update(dt);
             }
             if (mouse.just_right_pressed) {
-                self.sfx.play(.plant);
+                self.playSfx(.plant);
                 self.benchmark.splat_sprite(Benchmark.SPRITE_DEF_PLANTS, mouse.x, mouse.y, renderer);
             }
             if (self.explosions_enabled and mouse.just_pressed) {
@@ -181,7 +178,7 @@ pub fn ExampleScene(comptime Theme: type) type {
         fn handle_top_controls(self: *Self, mouse: Mouse, renderer: *Render) void {
             const ui_toggle_text: [:0]const u8 = if (self.ui_visible) "Hide UI" else "Show UI";
             if (self.fui.button(renderer, self.fui.pivotX(.top_right) - 140, self.fui.pivotY(.top_right), 136, 32, ui_toggle_text, Theme.MENU_SECONDARY_COLOR, Theme.MENU_HIGHLIGHT_COLOR, mouse)) {
-                self.sfx.play(if (self.ui_visible) SfxEffect.menu_back else SfxEffect.menu_main);
+                self.playSfx(if (self.ui_visible) AudioEffect.menu_back else AudioEffect.menu_main);
                 self.ui_visible = !self.ui_visible;
                 if (!self.ui_visible) {
                     self.action_state.go_to(Action.none);
@@ -195,22 +192,22 @@ pub fn ExampleScene(comptime Theme: type) type {
             switch (self.action_state.current) {
                 .toggle_sprite_trails => {
                     self.benchmark.sprite_trails_enabled = !self.benchmark.sprite_trails_enabled;
-                    self.sfx.play(if (self.benchmark.sprite_trails_enabled) SfxEffect.menu_main else SfxEffect.menu_back);
+                    self.playSfx(if (self.benchmark.sprite_trails_enabled) AudioEffect.menu_main else AudioEffect.menu_back);
                     self.action_state.go_to(Action.none);
                 },
                 .toggle_cursor_follow => {
                     self.benchmark.cursor_follow_enabled = !self.benchmark.cursor_follow_enabled;
-                    self.sfx.play(if (self.benchmark.cursor_follow_enabled) SfxEffect.menu_main else SfxEffect.menu_back);
+                    self.playSfx(if (self.benchmark.cursor_follow_enabled) AudioEffect.menu_main else AudioEffect.menu_back);
                     self.action_state.go_to(Action.none);
                 },
                 .toggle_simulation => {
                     self.benchmark.simulation_enabled = !self.benchmark.simulation_enabled;
-                    self.sfx.play(if (self.benchmark.simulation_enabled) SfxEffect.menu_main else SfxEffect.menu_back);
+                    self.playSfx(if (self.benchmark.simulation_enabled) AudioEffect.menu_main else AudioEffect.menu_back);
                     self.action_state.go_to(Action.none);
                 },
                 .toggle_explosions => {
                     self.explosions_enabled = !self.explosions_enabled;
-                    self.sfx.play(if (self.explosions_enabled) SfxEffect.menu_main else SfxEffect.menu_back);
+                    self.playSfx(if (self.explosions_enabled) AudioEffect.menu_main else AudioEffect.menu_back);
                     self.action_state.go_to(Action.none);
                 },
                 .play_proc_music => {
@@ -223,26 +220,26 @@ pub fn ExampleScene(comptime Theme: type) type {
                     self.action_state.go_to(Action.none);
                 },
                 .spawn_sprite => {
-                    self.sfx.play(SfxEffect.menu_main);
+                    self.playSfx(.menu_main);
                     self.benchmark.spawn_one();
                     self.action_state.go_to(Action.none);
                 },
                 .spawn_100_sprites => {
-                    self.sfx.play(SfxEffect.menu_main);
+                    self.playSfx(.menu_main);
                     self.benchmark.spawn_many(100);
                     self.action_state.go_to(Action.none);
                 },
                 .spawn_10k_sprites => {
-                    self.sfx.play(SfxEffect.menu_main);
+                    self.playSfx(.menu_main);
                     self.benchmark.spawn_many(10000);
                     self.action_state.go_to(Action.none);
                 },
                 .info_popup_init => {
-                    self.sfx.play(SfxEffect.menu_popup);
+                    self.playSfx(.menu_popup);
                     self.action_state.go_to(Action.info_popup);
                 },
                 .yes_no_popup_init => {
-                    self.sfx.play(SfxEffect.menu_popup);
+                    self.playSfx(.menu_popup);
                     self.action_state.go_to(Action.yes_no_popup);
                 },
                 .none, .info_popup, .yes_no_popup => {},
@@ -255,14 +252,14 @@ pub fn ExampleScene(comptime Theme: type) type {
             switch (self.action_state.current) {
                 .info_popup => {
                     if (self.fui.info_popup(renderer, "Information popup example", mouse, Theme.POPUP_COLOR) != null) {
-                        self.sfx.play(SfxEffect.menu_main);
+                        self.playSfx(.menu_main);
                         self.action_state.go_to(Action.none);
                     }
                 },
                 .yes_no_popup => {
                     if (self.fui.yes_no_popup(renderer, "Do you like this popup?", mouse)) |answer| {
                         self.last_yes_no = answer;
-                        self.sfx.play(if (answer) SfxEffect.menu_main else SfxEffect.menu_back);
+                        self.playSfx(if (answer) AudioEffect.menu_main else AudioEffect.menu_back);
                         self.action_state.go_to(Action.none);
                     }
                 },
@@ -317,6 +314,12 @@ pub fn ExampleScene(comptime Theme: type) type {
 
             const explosions_text: [:0]const u8 = if (self.explosions_enabled) "Explosions: ON" else "Explosions: OFF";
             self.fui.draw_text(renderer, explosions_text, sx, sy + 96, Theme.FONT_DEFAULT, Theme.PRIMARY_COLOR);
+        }
+
+        fn playSfx(self: *Self, effect: AudioEffect) void {
+            const tune = AudioCfg.sfx(effect);
+            if (tune.len == 0) return;
+            self.audio.play_tune(tune);
         }
     };
 }

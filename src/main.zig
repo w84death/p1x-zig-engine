@@ -16,8 +16,6 @@ const Audio = @import("engine/audio.zig").Audio;
 const ProcAudio = @import("engine/proc_audio.zig").ProcAudio;
 const Sprite = @import("engine/sprites.zig").Sprite;
 const SpriteSheet = @import("engine/sprites.zig").SpriteSheet;
-const Sfx = @import("logic/sfx.zig").Sfx;
-const SfxEffect = @import("logic/sfx.zig").Effect;
 const UiTheme = @import("themes/default.zig").UiTheme;
 //const UiTheme = @import("themes/smol.zig").UiTheme;
 //const UiTheme = @import("themes/shroom.zig").UiTheme;
@@ -38,7 +36,13 @@ const Menu = @import("engine/menu.zig").Menu(State, StateMachine, UiTheme);
 // Scenes
 const MenuScene = @import("scenes/menu.zig").MenuScene(Menu, UiTheme);
 const AboutScene = @import("scenes/about.zig").AboutScene(UiTheme);
-const ExampleScene = @import("scenes/example.zig").ExampleScene(UiTheme);
+const ExampleScene = @import("scenes/example.zig").ExampleScene(UiTheme, AudioTheme);
+
+fn playSfx(audio: *Audio, effect: AudioTheme.Effect) void {
+    const tune = AudioTheme.sfx(effect);
+    if (tune.len == 0) return;
+    audio.play_tune(tune);
+}
 
 pub fn main() void {
     std.debug.print("*************************************\n", .{});
@@ -79,14 +83,6 @@ pub fn main() void {
     defer renderer.deinit();
     var audio = Audio.init();
     defer audio.deinit();
-    var sfx = Sfx.init(
-        &audio,
-        AudioTheme.SFX_MENU_MAIN[0..],
-        AudioTheme.SFX_MENU_BACK[0..],
-        AudioTheme.SFX_POPUP[0..],
-        AudioTheme.SFX_EXPLOSION[0..],
-        AudioTheme.SFX_PLANT[0..],
-    );
     var proc_audio = ProcAudio.init(std.heap.c_allocator);
     defer proc_audio.deinit();
     var logo_sheet: ?*SpriteSheet = null;
@@ -139,7 +135,7 @@ pub fn main() void {
     const core_menu = Menu.init(&fui, &menu_groups);
     var menu = MenuScene.init(&fui, &sm, core_menu);
     var about = AboutScene.init(&fui);
-    var example = ExampleScene.init(std.heap.c_allocator, &fui, &renderer, &audio, &proc_audio, &sfx);
+    var example = ExampleScene.init(std.heap.c_allocator, &fui, &renderer, &audio, &proc_audio);
     defer example.deinit();
 
     std.debug.print("[init] Main initialized\n", .{});
@@ -150,7 +146,7 @@ pub fn main() void {
         renderer.perf_begin_sim();
         sm.update();
         if (prev_state == .main_menu and sm.current != .main_menu) {
-            sfx.play(SfxEffect.menu_main);
+            playSfx(&audio, .menu_main);
         }
         prev_state = sm.current;
         renderer.begin_frame();
@@ -199,7 +195,7 @@ pub fn main() void {
 
         // Top global navigation
         if (!sm.is(State.main_menu) and fui.button(&renderer, fui.pivotX(.top_left), fui.pivotY(.top_left), 120, 32, "< Menu", UiTheme.MENU_SECONDARY_COLOR, UiTheme.MENU_HIGHLIGHT_COLOR, mouse)) {
-            sfx.play(SfxEffect.menu_back);
+            playSfx(&audio, .menu_back);
             sm.go_to(State.main_menu);
         }
 
